@@ -1,0 +1,5 @@
+# caché local de despliegue de Firebase
+.firebase/
+# dependencias instaladas (se regeneran con npm install)
+functions/node_modules/
+node_modules/

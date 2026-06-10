@@ -2,11 +2,11 @@
   "name": "functions",
   "description": "Cloud Functions: agente IA del robot (proxy OpenAI)",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "index.js",
   "dependencies": {
-    "firebase-functions": "^5.0.0",
+    "firebase-functions": "^6.0.0",
     "openai": "^4.56.0"
   },
   "private": true

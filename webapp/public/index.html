@@ -161,6 +161,14 @@ const ctl = new Controller(robot);   // envuelve al robot: dead-reckoning, explo
 let connected = false;
 
 if (!webBluetoothAvailable()) {
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isFirefox = /Firefox/.test(ua);
+  let msg = '⚠️ Este navegador no soporta Web Bluetooth.';
+  if (isIOS) msg = '⚠️ Apple no permite Web Bluetooth en iPhone/iPad (ningún navegador de iOS lo soporta). Abre esta página en un Android o PC con Chrome/Edge.';
+  else if (isFirefox) msg = '⚠️ Firefox no soporta Web Bluetooth. Usa Chrome o Edge (en Android, Windows, Mac o Linux).';
+  else msg = '⚠️ Este navegador no soporta Web Bluetooth. Usa Chrome o Edge actualizado (no funciona en iPhone/iPad).';
+  $('warnSupport').textContent = msg;
   $('warnSupport').style.display = 'block';
   $('btnConnect').disabled = true;
 }

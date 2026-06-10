@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "cue-and-dash",
     "public": "public",
     "ignore": [
       "firebase.json",
@@ -20,6 +21,6 @@
   },
   "functions": {
     "source": "functions",
-    "runtime": "nodejs20"
+    "runtime": "nodejs22"
   }
 }
