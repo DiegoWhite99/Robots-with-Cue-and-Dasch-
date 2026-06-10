@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Control del Robot — Web Bluetooth</title>
+<style>
+  :root{ --bg:#0a0618; --panel:#160d2e; --field:#241653; --line:#3a2a6e;
+         --text:#f3eaff; --mute:#a99fd0; --cyan:#21e6ff; --magenta:#ff2bd6;
+         --ok:#2bff9b; --warn:#ffe23d; --danger:#ff4d6d; }
+  *{box-sizing:border-box;}
+  body{margin:0; color:var(--text); font-family:system-ui,"Segoe UI",sans-serif;
+       background:radial-gradient(60% 42% at 50% 0%, rgba(255,43,214,.18), transparent 60%), #0a0618;
+       padding-bottom:40px;}
+  header{display:flex; align-items:center; gap:12px; padding:14px 18px; flex-wrap:wrap;
+         border-bottom:1px solid var(--line);}
+  .brand{font-size:18px; font-weight:700; flex:1;}
+  .pill{padding:6px 13px; border-radius:999px; font-weight:600; font-size:13px; color:#08121f;
+        background:var(--warn);}
+  .pill.ok{background:var(--ok);} .pill.bad{background:var(--danger); color:#fff;}
+  .grid{display:grid; grid-template-columns:1fr; gap:18px; padding:18px; max-width:680px; margin:0 auto;}
+  @media(min-width:680px){ .grid{grid-template-columns:repeat(2,1fr);} .full{grid-column:1/-1;} }
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:18px;}
+  .card h2{margin:0 0 12px; font-size:15px;}
+  .btn{border:0; border-radius:12px; padding:12px 14px; font-size:15px; font-weight:700;
+       cursor:pointer; color:#08121f; background:var(--cyan); width:100%;}
+  .btn.danger{background:var(--danger); color:#fff;} .btn.gray{background:var(--field); color:var(--text);}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+  .dpad{display:grid; grid-template-columns:repeat(3,72px); grid-template-rows:repeat(3,72px);
+        gap:9px; justify-content:center; margin:6px auto;}
+  .dpad button{font-size:25px; border-radius:14px; background:var(--field); color:var(--cyan);
+        border:1.5px solid rgba(33,230,255,.28); cursor:pointer; user-select:none; touch-action:none;}
+  .dpad button:active{background:rgba(33,230,255,.18);}
+  .dpad .stop{color:var(--magenta); border-color:rgba(255,43,214,.4);}
+  .b-fwd{grid-area:1/2;} .b-left{grid-area:2/1;} .b-stop{grid-area:2/2;}
+  .b-right{grid-area:2/3;} .b-back{grid-area:3/2;}
+  label.row{display:block; margin:12px 0 4px; color:var(--mute); font-size:13px;}
+  input[type=range]{width:100%; accent-color:var(--magenta);}
+  .colors{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .colors button{border:0; border-radius:10px; padding:14px 4px; cursor:pointer;}
+  .row2{display:flex; gap:8px;}
+  .row2 .btn{flex:1;}
+  .muted{color:var(--mute); font-size:13px; line-height:1.5;}
+  .telemetry{display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:var(--mute);}
+  .telemetry b{color:var(--text);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">🤖 Control del Robot <span class="muted" style="font-size:12px">· Web Bluetooth</span></div>
+  <span id="pill" class="pill">Sin conectar</span>
+</header>
+
+<div class="grid">
+
+  <div class="card full">
+    <h2>🔌 Conexión</h2>
+    <label class="row" for="typeSel">Robot</label>
+    <select id="typeSel" style="width:100%; padding:10px; border-radius:10px; background:var(--field); color:var(--text); border:1px solid var(--line); margin-bottom:10px">
+      <option value="any">Cualquiera (Dash o Cue)</option>
+      <option value="dash">Dash</option>
+      <option value="cue">Cue</option>
+    </select>
+    <div class="row2">
+      <button class="btn" id="btnConnect">Conectar</button>
+      <button class="btn gray" id="btnDisconnect" disabled>Desconectar</button>
+    </div>
+    <p class="muted" id="warnSupport" style="display:none; color:var(--warn)">
+      ⚠️ Este navegador no soporta Web Bluetooth. Usa Chrome o Edge (no funciona en iPhone).
+    </p>
+    <div class="telemetry" id="telemetry" style="margin-top:12px">
+      <span>Frente: <b id="tFront">—</b></span>
+      <span>Atrás: <b id="tRear">—</b></span>
+      <span>Rumbo: <b id="tDeg">—</b></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🎮 Conducir</h2>
+    <div class="dpad">
+      <button class="b-fwd" data-drive="fwd">▲</button>
+      <button class="b-left" data-drive="left">◀</button>
+      <button class="b-stop stop" id="btnStop">STOP</button>
+      <button class="b-right" data-drive="right">▶</button>
+      <button class="b-back" data-drive="back">▼</button>
+    </div>
+    <label class="row">Velocidad: <span id="spdVal">30</span> cm/s</label>
+    <input type="range" id="spd" min="5" max="60" value="30">
+    <label class="row">Giro: <span id="turnVal">120</span> °/s</label>
+    <input type="range" id="turn" min="20" max="200" value="120">
+    <p class="muted">Mantén presionado para mover (o usa W A S D · Espacio = parar).</p>
+  </div>
+
+  <div class="card">
+    <h2>💡 Luces</h2>
+    <div class="colors">
+      <button style="background:#ff2b3b" data-rgb="1,0,0"></button>
+      <button style="background:#2bff5b" data-rgb="0,1,0"></button>
+      <button style="background:#2b6bff" data-rgb="0,0.3,1"></button>
+      <button style="background:#ffe23d" data-rgb="1,0.9,0"></button>
+      <button style="background:#ff2bd6" data-rgb="1,0,0.7"></button>
+      <button style="background:#21e6ff" data-rgb="0,0.9,1"></button>
+      <button style="background:#ffffff" data-rgb="1,1,1"></button>
+      <button style="background:#222" data-rgb="0,0,0"></button>
+    </div>
+    <label class="row">Cabeza — Pan: <span id="panVal">0</span>°</label>
+    <input type="range" id="pan" min="-120" max="120" value="0">
+    <label class="row">Cabeza — Tilt: <span id="tiltVal">0</span>°</label>
+    <input type="range" id="tilt" min="-10" max="22" value="0">
+  </div>
+
+</div>
+
+<script type="module">
+import { WonderRobot, webBluetoothAvailable } from './js/robot.js';
+
+const $ = (id) => document.getElementById(id);
+const robot = new WonderRobot();
+let connected = false;
+
+if (!webBluetoothAvailable()) {
+  $('warnSupport').style.display = 'block';
+  $('btnConnect').disabled = true;
+}
+
+function setPill(text, cls) { const p = $('pill'); p.textContent = text; p.className = 'pill ' + (cls || ''); }
+
+robot.onConnect = (r) => {
+  connected = true;
+  setPill(`${r.typeName} «${r.name}»`, 'ok');
+  $('btnDisconnect').disabled = false;
+  $('btnConnect').disabled = true;
+};
+robot.onDisconnect = () => {
+  connected = false;
+  setPill('Desconectado', 'bad');
+  $('btnDisconnect').disabled = true;
+  $('btnConnect').disabled = false;
+};
+robot.onSensors = (s) => {
+  $('tFront').textContent = s.distFront != null ? s.distFront.toFixed(0) + ' cm' : '—';
+  $('tRear').textContent = s.distRear != null ? s.distRear.toFixed(0) + ' cm' : '—';
+  $('tDeg').textContent = s.pose ? s.pose.deg.toFixed(0) + '°' : '—';
+};
+
+$('btnConnect').onclick = async () => {
+  try { setPill('Buscando…', ''); await robot.connect($('typeSel').value); }
+  catch (e) { setPill('Error', 'bad'); console.error(e); alert('No se pudo conectar: ' + e.message); }
+};
+$('btnDisconnect').onclick = () => robot.disconnect();
+
+// --- conducción ---
+const spd = () => parseInt($('spd').value, 10);
+const turnSpd = () => parseInt($('turn').value, 10);
+$('spd').oninput = () => $('spdVal').textContent = spd();
+$('turn').oninput = () => $('turnVal').textContent = turnSpd();
+
+function doDrive(dir) {
+  if (!connected) return;
+  if (dir === 'fwd') robot.drive(spd(), 0);
+  else if (dir === 'back') robot.drive(-spd(), 0);
+  else if (dir === 'left') robot.drive(0, turnSpd());
+  else if (dir === 'right') robot.drive(0, -turnSpd());
+}
+function doStop() { if (connected) robot.stop(); }
+
+document.querySelectorAll('[data-drive]').forEach(btn => {
+  const dir = btn.dataset.drive;
+  btn.addEventListener('pointerdown', (e) => { e.preventDefault(); doDrive(dir); });
+  btn.addEventListener('pointerup', doStop);
+  btn.addEventListener('pointerleave', doStop);
+  btn.addEventListener('pointercancel', doStop);
+});
+$('btnStop').addEventListener('pointerdown', doStop);
+
+const keyMap = { w: 'fwd', s: 'back', a: 'left', d: 'right' };
+const held = {};
+window.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === ' ') { doStop(); return; }
+  if (keyMap[k] && !held[k]) { held[k] = true; doDrive(keyMap[k]); }
+});
+window.addEventListener('keyup', (e) => {
+  const k = e.key.toLowerCase();
+  if (keyMap[k]) { held[k] = false; doStop(); }
+});
+
+// --- luces ---
+document.querySelectorAll('[data-rgb]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!connected) return;
+    const [r, g, b] = btn.dataset.rgb.split(',').map(Number);
+    robot.lights(r, g, b);
+  });
+});
+
+// --- cabeza ---
+function applyHead() {
+  if (!connected) return;
+  robot.head(parseInt($('pan').value, 10), parseInt($('tilt').value, 10));
+}
+$('pan').oninput = () => { $('panVal').textContent = $('pan').value; applyHead(); };
+$('tilt').oninput = () => { $('tiltVal').textContent = $('tilt').value; applyHead(); };
+</script>
+</body>
+</html>
