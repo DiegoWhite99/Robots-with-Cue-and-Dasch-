@@ -200,6 +200,12 @@
     <p id="agentSay" style="min-height:22px; font-weight:600; color:#fff"></p>
   </div>
 
+  <div class="card full" data-view="ia">
+    <h2>⚡ Rutinas IA automáticas</h2>
+    <p class="muted" style="margin-top:0">Toca una rutina y la IA la ejecuta sobre el robot conectado.</p>
+    <div id="iaPresets" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; margin-top:10px"></div>
+  </div>
+
   <!-- ===== EXPLORADOR ===== -->
   <div class="card full" data-view="explorar">
     <h2>🧭 Explorador autónomo</h2>
@@ -213,7 +219,21 @@
       <button class="btn" id="btnExplore">▶ Explorar</button>
       <button class="btn gray" id="btnAvoid">Anti-choque: OFF</button>
     </div>
+    <button class="btn gray" id="btnExploreReset" style="margin-top:8px">↺ Reiniciar aprendizaje</button>
     <p class="muted" id="exploreInfo" style="margin-top:10px">Avanza solo evitando obstáculos (siempre con anti-choque).</p>
+  </div>
+
+  <div class="card full" data-view="explorar">
+    <h2>📊 Dashboard de eventos (aprendizaje)</h2>
+    <div class="telemetry" id="exploreStats">
+      <span>Estado: <b id="exState">OFF</b></span>
+      <span>Escapes: <b id="exEscapes">0</b></span>
+      <span>Bucles evitados: <b id="exLoops">0</b></span>
+      <span>Atascos: <b id="exStuck">0</b></span>
+      <span>Sesgo giro: <b id="exBias">0</b></span>
+      <span>Última: <b id="exLast">—</b></span>
+    </div>
+    <pre id="exRecent" style="margin-top:10px; max-height:200px; overflow:auto; border-radius:10px; background:rgba(0,0,0,.28); padding:10px; font-size:12px; line-height:1.5; white-space:pre-wrap; color:var(--mute)">Sin eventos todavía.</pre>
   </div>
 
   <!-- ===== MAPA + RUTAS ===== -->
@@ -347,10 +367,25 @@ $('btnExplore').onclick = () => {
   syncAvoidBtn();
 };
 $('btnAvoid').onclick = () => { if (!ctl.exploreEnabled) { ctl.setAvoid(!ctl.avoidEnabled); syncAvoidBtn(); } };
+$('btnExploreReset').onclick = () => ctl.resetExploreLearning(false);
 function syncAvoidBtn() {
   $('btnAvoid').textContent = 'Anti-choque: ' + (ctl.avoidEnabled ? 'ON' : 'OFF');
   $('btnAvoid').className = ctl.avoidEnabled ? 'btn' : 'btn gray';
 }
+
+// dashboard de eventos del explorador (puerto de renderAutoruta)
+function updateExploreDashboard() {
+  const ai = ctl.exploreSnapshot();
+  $('exState').textContent = ai.running ? 'ON (' + ai.profile + ')' : 'OFF';
+  $('exEscapes').textContent = ai.escapes || 0;
+  $('exLoops').textContent = ai.loops_avoided || 0;
+  $('exStuck').textContent = ai.stuck_events || 0;
+  $('exBias').textContent = (ai.turn_bias || 0).toFixed(2) + (ai.turn_bias > 0.1 ? ' (izq)' : ai.turn_bias < -0.1 ? ' (der)' : '');
+  $('exLast').textContent = ai.last_decision ? (ai.last_decision === 'left' ? 'izq' : 'der') + (ai.last_improved ? ' ✓' : '') : '—';
+  const items = Array.isArray(ai.recent) ? ai.recent : [];
+  $('exRecent').textContent = items.length ? items.slice().reverse().join('\n') : 'Sin eventos todavía.';
+}
+setInterval(updateExploreDashboard, 500);
 
 // ---------- IA + micrófono ----------
 const AGENT_URL = window.AGENT_URL || '/agent';
@@ -378,6 +413,30 @@ async function sendAgent() {
 $('agentSend').onclick = sendAgent;
 $('agentInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendAgent(); });
 $('agentStop').onclick = () => { ctl.stopAgent(); robot.stop(); $('agentStop').disabled = true; };
+
+// rutinas IA automáticas (presets) — puerto de IA_PRESETS del panel original
+const IA_PRESETS = [
+  { emoji: '🕺', name: 'Baile Neón', prompt: 'haz un baile corto de 10 segundos con giros suaves y luces de colores, termina en stop' },
+  { emoji: '📖', name: 'Historia Corta', prompt: 'cuenta una historia corta y alegre para niños en español y acompáñala con movimientos suaves' },
+  { emoji: '👋', name: 'Saludo Show', prompt: 'haz una rutina de saludo: mueve la cabeza, prende luces, avanza un poco y despídete' },
+  { emoji: '🌈', name: 'Arcoíris', prompt: 'haz un show de colores: cambia entre rojo verde azul amarillo magenta cyan y termina en blanco' },
+  { emoji: '🚗', name: 'Desfile', prompt: 'avanza en línea recta, gira, regresa al punto inicial y termina quieto' },
+  { emoji: '🛡️', name: 'Patrulla', prompt: 'haz una mini patrulla de seguridad con giros a izquierda y derecha, luces amarillas y final en stop' },
+  { emoji: '🎭', name: 'Teatro', prompt: 'haz una mini escena divertida de 12 segundos con dos giros, una pausa dramática y cierre elegante' },
+  { emoji: '🎶', name: 'Ritmo', prompt: 'haz movimientos rítmicos como si siguieras música, alterna giros y cabeza arriba-abajo' },
+  { emoji: '💡', name: 'Luz Zen', prompt: 'haz una rutina calmada: movimiento lento, luces suaves en cyan y azul, y final en reposo' },
+  { emoji: '🚀', name: 'Misión Rápida', prompt: 'ejecuta una misión rápida: avanzar, girar 90, avanzar, girar de vuelta y detenerse' },
+  { emoji: '🤖', name: 'Presentación', prompt: 'preséntate en español en una frase corta y haz una demostración breve de movimientos y luces' },
+  { emoji: '🎉', name: 'Celebración', prompt: 'haz una celebración final: luces brillantes, un giro completo y saludo de despedida' },
+];
+const presetBox = $('iaPresets');
+IA_PRESETS.forEach(p => {
+  const b = document.createElement('button');
+  b.className = 'btn gray'; b.style.fontSize = '13px'; b.style.padding = '10px 8px';
+  b.innerHTML = `${p.emoji} ${p.name}`;
+  b.onclick = () => { $('agentInput').value = p.prompt; sendAgent(); };
+  presetBox.append(b);
+});
 
 // reconocimiento de voz (Web Speech API)
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
