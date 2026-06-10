@@ -115,21 +115,32 @@ Portar el empaquetado de bits (es lo más delicado):
 > prueba final contra el robot real en Chrome, y luego Fases B/C/D (IA en Cloud
 > Functions, hosting Firebase).
 
-### Fase B — IA en la nube
-6. `firebase init functions` → crear función `planFromText` que llama a OpenAI.
-7. Guardar la key: `firebase functions:secrets:set OPENAI_API_KEY`.
-8. El frontend llama a la Cloud Function en vez de a `agent.py`.
+### Fase B — IA en la nube  ✅ HECHA
+6. ✅ `webapp/functions/index.js` — Cloud Function `agent` (proxy OpenAI, puerto de
+   `agent.py` con el SYSTEM_PROMPT verbatim). Key como secreto `OPENAI_API_KEY`.
+7. ✅ `controller.runPlan()` — ejecuta el plan `{steps}` en el robot (puerto de
+   `_run_plan`); el frontend lee el `say` con `speechSynthesis`.
+8. ✅ UI con tarjeta IA (input + enviar + parar). `firebase.json` reescribe `/agent`.
 
-### Fase C — Datos
-9. `firebase init firestore` (o usar IndexedDB si se quiere 100% local/offline).
-10. Migrar el guardado/listado/borrado de rutas a la nueva capa.
+### Fase C — Datos  ✅ HECHA (IndexedDB)
+9. ✅ `webapp/public/js/routes-db.js` — rutas en IndexedDB (offline, sin servidor).
+   No se usó Firestore: las rutas son locales del dispositivo y no necesitan nube.
 
-### Fase D — Hosting y publicación
-11. `npm install -g firebase-tools`
-12. `firebase login`
-13. `firebase init hosting` → carpeta pública: `web/` (o un `dist/` de build).
-14. `firebase deploy --only hosting,functions`
-15. Abrir la URL `https://TU-PROYECTO.web.app` en **Chrome/Android** y probar.
+### Fase D — Hosting y publicación  ✅ SCAFFOLD LISTO
+10. ✅ `webapp/firebase.json` (hosting + functions + rewrite) y `.firebaserc`.
+11. ⏳ Pasos finales (los ejecuta el usuario, requieren login y project id) — ver
+    `webapp/README.md`:
+    ```
+    npm install -g firebase-tools
+    firebase login
+    npm --prefix functions install
+    firebase functions:secrets:set OPENAI_API_KEY
+    firebase deploy --only hosting,functions
+    ```
+
+> Estado global: Fases A, B, C completas en código y verificadas con pruebas; Fase D
+> con todo el scaffold listo. Falta solo ejecutar el `firebase deploy` (necesita la
+> cuenta y el project id del usuario) y la prueba final con el robot real en Chrome.
 
 ## 5. Esfuerzo y riesgos
 

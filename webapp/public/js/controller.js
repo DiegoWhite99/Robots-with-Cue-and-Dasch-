@@ -9,6 +9,20 @@ import { ROBOT_TYPE } from './protocol.js';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const now = () => performance.now() / 1000.0; // segundos monotónicos
 
+// Colores por nombre -> (r,g,b) en 0..1 (puerto de robot_core.COLOR_RGB).
+const COLOR_RGB = {
+  red: [1, 0, 0], rojo: [1, 0, 0],
+  green: [0, 1, 0], verde: [0, 1, 0],
+  blue: [0, 0.3, 1], azul: [0, 0.3, 1],
+  yellow: [1, 0.9, 0], amarillo: [1, 0.9, 0],
+  magenta: [1, 0, 0.7], morado: [0.6, 0, 1], purple: [0.6, 0, 1],
+  cyan: [0, 0.9, 1],
+  white: [1, 1, 1], blanco: [1, 1, 1],
+  off: [0, 0, 0], apagar: [0, 0, 0], negro: [0, 0, 0],
+};
+
+function clampNum(v, lo, hi) { v = Number(v); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : lo; }
+
 // Sonidos de alerta por tipo de robot (clips de fábrica que viven en el robot).
 const ALERT_SOUNDS = {
   [ROBOT_TYPE.CUE]: 'SNCHWHOA',
@@ -102,6 +116,10 @@ export class Controller {
     // replay
     this._replayStop = false;
     this.replay = { playing: false, i: 0, total: 0, routeId: null };
+
+    // agente IA
+    this.agentBusy = false;
+    this._agentStop = false;
 
     // wiring de sensores y grabación
     robot.onSensors = (s) => this._onSensors(s);
@@ -443,6 +461,89 @@ export class Controller {
   }
 
   stopReplay() { this._replayStop = true; }
+
+  // ----------------------------- baile (MotionRunner.dance) ----------------------------- //
+  async dance() {
+    const colors = [[1, 0, 0], [1, 0.6, 0], [1, 1, 0], [0, 1, 0], [0, 0.4, 1], [0.6, 0, 1]];
+    for (let i = 0; i < 6; i++) {
+      if (this._agentStop) return;
+      this.robot.lights(...colors[i % colors.length], false);
+      this.robot.drive(0, i % 2 === 0 ? 180 : -180, false);
+      await sleep(450);
+    }
+    this.robot.stop(false);
+    this.robot.lights(0, 0, 0, false);
+  }
+
+  // ----------------------------- agente IA (robot_core._run_plan) ----------------------------- //
+  stopAgent() { this._agentStop = true; }
+
+  async runPlan(steps) {
+    if (!steps || !steps.length || !this.robot.connected || this.agentBusy) return false;
+    this._agentStop = false;
+    this.agentBusy = true;
+    // ejecuta sin bloquear al llamador
+    this._runPlanAsync(steps).finally(() => {
+      this.robot.stop(false);
+      this.agentBusy = false;
+    });
+    return true;
+  }
+
+  async _waitChecking(seconds) {
+    const t0 = now();
+    while (now() - t0 < seconds) {
+      if (this._agentStop) return;
+      await sleep(50);
+    }
+  }
+
+  async _runPlanAsync(steps) {
+    for (const st of steps) {
+      if (this._agentStop) break;
+      if (!st || typeof st !== 'object') continue;
+      const act = String(st.action || '').toLowerCase();
+
+      if (['forward', 'avanzar', 'adelante', 'walk', 'move'].includes(act)) {
+        const cm = clampNum(st.cm ?? st.distance ?? 30, 1, 200);
+        this.robot.forward(cm, 35);
+        await this._waitChecking(cm / 35.0);
+      } else if (['backward', 'back', 'retroceder', 'reverse', 'atras'].includes(act)) {
+        const cm = clampNum(st.cm ?? st.distance ?? 30, 1, 200);
+        this.robot.forward(-cm, 35);
+        await this._waitChecking(cm / 35.0);
+      } else if (['turn', 'girar', 'turnleft', 'turnright', 'rotate'].includes(act)) {
+        let deg = Math.abs(clampNum(st.deg ?? st.degrees ?? 90, 1, 360));
+        const d = String(st.dir || '').toLowerCase();
+        if (act.includes('right') || ['right', 'derecha', 'der', 'r'].includes(d)) deg = -deg;
+        this.robot.turn(deg, 90);
+        await this._waitChecking(Math.abs(deg) / 90.0);
+      } else if (['lights', 'light', 'luz', 'color'].includes(act)) {
+        const rgb = COLOR_RGB[String(st.color || 'white').toLowerCase()] || [1, 1, 1];
+        this.robot.lights(...rgb);
+      } else if (act === 'head') {
+        const pos = String(st.pos || 'center').toLowerCase();
+        const tilt = (pos.includes('up') || pos.includes('arriba')) ? 20
+          : (pos.includes('down') || pos.includes('abajo')) ? -8 : 0;
+        this.robot.head(0, tilt);
+      } else if (['dance', 'baila', 'bailar'].includes(act)) {
+        await this.dance();
+      } else if (['sound', 'voz', 'voice', 'audio'].includes(act)) {
+        const slot = st.slot;
+        if (slot != null) {
+          const n = parseInt(slot, 10);
+          if (n >= 1 && n <= 10) this.robot.playSound(`SYSTVOICE${n - 1}`);
+        } else if (st.name) {
+          this.robot.playSound(String(st.name));
+        }
+        await this._waitChecking(1.0);
+      } else if (['wait', 'esperar', 'pausa', 'pause'].includes(act)) {
+        await this._waitChecking(clampNum(st.seconds ?? st.s ?? 1, 0, 5));
+      } else if (['stop', 'parar', 'alto', 'detener'].includes(act)) {
+        this.robot.stop(false);
+      }
+    }
+  }
 
   status() {
     return {

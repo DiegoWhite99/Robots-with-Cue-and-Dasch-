@@ -76,6 +76,17 @@
     </div>
   </div>
 
+  <div class="card full">
+    <h2>🧠 IA — dile qué hacer</h2>
+    <div style="display:flex; gap:8px; flex-wrap:wrap">
+      <input id="agentInput" type="text" placeholder='Ej: "camina 50 cm y gira a la derecha" · "ponte azul y baila"'
+             style="flex:1; min-width:200px; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:var(--field); color:var(--text); font-size:15px">
+      <button class="btn" id="agentSend" style="width:auto; flex:0 0 auto">Enviar ▸</button>
+      <button class="btn danger" id="agentStop" style="width:auto; flex:0 0 auto" disabled>■ Parar</button>
+    </div>
+    <p class="muted" id="agentSay" style="min-height:20px; margin-top:10px"></p>
+  </div>
+
   <div class="card">
     <h2>🎮 Conducir</h2>
     <div class="dpad">
@@ -308,6 +319,50 @@ async function refreshRoutes() {
   }
 }
 refreshRoutes();
+
+// --- agente IA (Cloud Function /agent) ---
+// En Firebase Hosting, /agent se reescribe a la Cloud Function. En local usa el
+// emulador (firebase emulators:start) o define window.AGENT_URL.
+const AGENT_URL = window.AGENT_URL || '/agent';
+
+function speak(text) {
+  if (!text || !('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'es-ES';
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+
+async function sendAgent() {
+  const text = $('agentInput').value.trim();
+  if (!text) return;
+  if (!connected) { $('agentSay').textContent = 'Conecta el robot primero.'; return; }
+  if (ctl.agentBusy) { $('agentSay').textContent = 'La IA ya está ejecutando una rutina.'; return; }
+  $('agentSay').textContent = 'Pensando…';
+  $('agentSend').disabled = true;
+  try {
+    const resp = await fetch(AGENT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const data = await resp.json();
+    if (!data.ok) { $('agentSay').textContent = data.error || 'Error de la IA.'; return; }
+    $('agentSay').textContent = data.say || '(sin texto)';
+    speak(data.say);
+    if (data.steps && data.steps.length) {
+      ctl.runPlan(data.steps);
+      $('agentStop').disabled = false;
+    }
+  } catch (e) {
+    $('agentSay').textContent = 'No se pudo contactar la IA: ' + e.message;
+  } finally {
+    $('agentSend').disabled = false;
+  }
+}
+$('agentSend').onclick = sendAgent;
+$('agentInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendAgent(); });
+$('agentStop').onclick = () => { ctl.stopAgent(); robot.stop(); $('agentStop').disabled = true; };
 </script>
 </body>
 </html>

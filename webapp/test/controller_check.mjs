@@ -30,7 +30,9 @@ class FakeRobot {
   stop(record = true) { this._cmd('stop', {}, record); }
   head(p, t, record = true) { this._cmd('head', { pan: p, tilt: t }, record); }
   lights(r, g, b, record = true) { this._cmd('lights', { r, g, b }, record); }
-  playSound() {}
+  forward(cm, speed, record = true) { this._cmd('forward', { cm, speed }, record); }
+  turn(deg, speed, record = true) { this._cmd('turn', { deg, speed }, record); }
+  playSound(name) { this._cmd('sound', { name }, false); }
   feed(sensors) { this.sensors = sensors; if (this.onSensors) this.onSensors(sensors); }
 }
 
@@ -95,6 +97,25 @@ const [turnLeft2] = ctl._chooseExploreTurn(10, 60); // der más despejado
 check('elige girar a la derecha si der despejado', turnLeft2 === false);
 const snap = ctl.exploreSnapshot();
 check('snapshot trae perfil', snap.profile === 'normal');
+
+// ============ 5) Agente IA: ejecutar plan (runPlan) ============
+robot.calls = [];
+const plan = [
+  { action: 'lights', color: 'blue' },
+  { action: 'forward', cm: 2 },
+  { action: 'turn', deg: 2, dir: 'right' },
+  { action: 'stop' },
+];
+const started = await ctl.runPlan(plan);
+check('runPlan arranca', started === true);
+check('agentBusy true durante ejecución', ctl.agentBusy === true);
+// esperar a que termine
+while (ctl.agentBusy) await new Promise(r => setTimeout(r, 20));
+check('plan ejecuta lights azul', robot.calls.some(c => c.action === 'lights' && c.params.b === 1));
+check('plan ejecuta forward', robot.calls.some(c => c.action === 'forward' && c.params.cm === 2));
+const turnCall = robot.calls.find(c => c.action === 'turn');
+check('turn a la derecha => grados negativos', turnCall && turnCall.params.deg === -2, JSON.stringify(turnCall));
+check('plan termina con stop (final)', robot.calls[robot.calls.length - 1].action === 'stop');
 
 console.log(`\n${pass} OK, ${fail} FAIL`);
 process.exit(fail === 0 ? 0 : 1);

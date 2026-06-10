@@ -6,6 +6,9 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "rewrites": [
+      { "source": "/agent", "function": "agent" }
+    ],
     "headers": [
       {
         "source": "**/*.@(js|html)",
@@ -14,5 +17,9 @@
         ]
       }
     ]
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
   }
 }
