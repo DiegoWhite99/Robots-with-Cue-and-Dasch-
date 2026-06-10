@@ -100,12 +100,20 @@ Portar el empaquetado de bits (es lo más delicado):
 4. ✅ Validación byte-a-byte: `webapp/test/check_js.mjs` compara la salida JS contra
    el codificador Python real (`ref_python.py`). **16/16 vectores idénticos.**
    Correr con: `node webapp/test/check_js.mjs`.
-5. ⏳ Pendiente: portar la lógica de alto nivel restante (explorador autónomo,
-   grabación/reproducción de rutas, dead-reckoning/mapa) e integrarla en la UI.
+5. ✅ Lógica de alto nivel portada (`webapp/public/js/controller.js`):
+   dead-reckoning (rumbo giroscopio + encoders), mapa de calor, evita-obstáculos,
+   explorador autónomo con 3 perfiles y anti-bucle, grabador y reproductor de rutas.
+6. ✅ Rutas en `webapp/public/js/routes-db.js` (IndexedDB, reemplaza SQLite, offline).
+7. ✅ UI integrada: el demo usa el `Controller` y añade explorador, anti-choque,
+   grabación y lista de rutas (reproducir/borrar).
+8. ✅ Validación determinista con robot simulado: `webapp/test/controller_check.mjs`
+   (21/21 OK — dead-reckoning, grabador, replay, decisión de giro del explorador).
+   Correr con: `node webapp/test/controller_check.mjs`.
 
-> Nota: el núcleo del protocolo (lo más riesgoso) ya está reescrito y verificado
-> contra Python. Falta probarlo contra el robot real en Chrome y portar las
-> funciones de alto nivel.
+> Estado: Fase A completa a nivel de lógica (protocolo + alto nivel), toda
+> verificada contra Python y con pruebas deterministas. Falta únicamente la
+> prueba final contra el robot real en Chrome, y luego Fases B/C/D (IA en Cloud
+> Functions, hosting Firebase).
 
 ### Fase B — IA en la nube
 6. `firebase init functions` → crear función `planFromText` que llama a OpenAI.

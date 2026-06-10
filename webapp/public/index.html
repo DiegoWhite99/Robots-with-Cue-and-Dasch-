@@ -110,13 +110,43 @@
     <input type="range" id="tilt" min="-10" max="22" value="0">
   </div>
 
+  <div class="card">
+    <h2>🧭 Explorador autónomo</h2>
+    <label class="row" for="profSel">Perfil</label>
+    <select id="profSel" style="width:100%; padding:10px; border-radius:10px; background:var(--field); color:var(--text); border:1px solid var(--line); margin-bottom:10px">
+      <option value="suave">Suave</option>
+      <option value="normal" selected>Normal</option>
+      <option value="agresivo">Agresivo</option>
+    </select>
+    <div class="row2">
+      <button class="btn" id="btnExplore">▶ Explorar</button>
+      <button class="btn gray" id="btnAvoid">Anti-choque: OFF</button>
+    </div>
+    <p class="muted" id="exploreInfo">Avanza solo evitando obstáculos (siempre con anti-choque).</p>
+  </div>
+
+  <div class="card">
+    <h2>🗺️ Grabar y reproducir rutas</h2>
+    <div class="row2">
+      <button class="btn" id="btnRec">● Grabar</button>
+      <button class="btn gray" id="btnRecStop" disabled>■ Detener y guardar</button>
+    </div>
+    <p class="muted" id="recInfo" style="min-height:18px"></p>
+    <table style="width:100%; border-collapse:collapse; font-size:14px; margin-top:8px">
+      <tbody id="routeList"><tr><td class="muted">Sin rutas guardadas.</td></tr></tbody>
+    </table>
+  </div>
+
 </div>
 
 <script type="module">
 import { WonderRobot, webBluetoothAvailable } from './js/robot.js';
+import { Controller } from './js/controller.js';
+import { saveRoute, listRoutes, getRouteSteps, deleteRoute } from './js/routes-db.js';
 
 const $ = (id) => document.getElementById(id);
 const robot = new WonderRobot();
+const ctl = new Controller(robot);   // envuelve al robot: dead-reckoning, explorador, grabador, replay
 let connected = false;
 
 if (!webBluetoothAvailable()) {
@@ -131,6 +161,7 @@ robot.onConnect = (r) => {
   setPill(`${r.typeName} «${r.name}»`, 'ok');
   $('btnDisconnect').disabled = false;
   $('btnConnect').disabled = true;
+  refreshRoutes();
 };
 robot.onDisconnect = () => {
   connected = false;
@@ -138,10 +169,16 @@ robot.onDisconnect = () => {
   $('btnDisconnect').disabled = true;
   $('btnConnect').disabled = false;
 };
+// El Controller ya consume robot.onSensors; aquí solo actualizamos telemetría.
+const baseOnSensors = robot.onSensors;
 robot.onSensors = (s) => {
-  $('tFront').textContent = s.distFront != null ? s.distFront.toFixed(0) + ' cm' : '—';
-  $('tRear').textContent = s.distRear != null ? s.distRear.toFixed(0) + ' cm' : '—';
-  $('tDeg').textContent = s.pose ? s.pose.deg.toFixed(0) + '°' : '—';
+  baseOnSensors(s);  // mantiene dead-reckoning / avoid del Controller
+  $('tFront').textContent = ctl.lastDistance != null ? ctl.lastDistance.toFixed(0) + ' cm' : '—';
+  $('tRear').textContent = ctl.lastDistanceRear != null ? ctl.lastDistanceRear.toFixed(0) + ' cm' : '—';
+  $('tDeg').textContent = ctl.pose.valid ? ctl.pose.deg.toFixed(0) + '°' : '—';
+  if (ctl.recorder.recording) {
+    $('recInfo').textContent = `Grabando… ${(ctl.recorder.elapsedMs() / 1000).toFixed(1)}s · ${ctl.recorder.stepCount()} pasos`;
+  }
 };
 
 $('btnConnect').onclick = async () => {
@@ -157,7 +194,7 @@ $('spd').oninput = () => $('spdVal').textContent = spd();
 $('turn').oninput = () => $('turnVal').textContent = turnSpd();
 
 function doDrive(dir) {
-  if (!connected) return;
+  if (!connected || ctl.avoiding || ctl.exploreEnabled) return; // bloqueado durante esquive/exploración
   if (dir === 'fwd') robot.drive(spd(), 0);
   else if (dir === 'back') robot.drive(-spd(), 0);
   else if (dir === 'left') robot.drive(0, turnSpd());
@@ -202,6 +239,75 @@ function applyHead() {
 }
 $('pan').oninput = () => { $('panVal').textContent = $('pan').value; applyHead(); };
 $('tilt').oninput = () => { $('tiltVal').textContent = $('tilt').value; applyHead(); };
+
+// --- explorador autónomo ---
+$('profSel').onchange = () => ctl.setExploreProfile($('profSel').value);
+$('btnExplore').onclick = () => {
+  if (!connected) return;
+  const on = !ctl.exploreEnabled;
+  ctl.setExplore(on);
+  $('btnExplore').textContent = on ? '⏹ Detener' : '▶ Explorar';
+  $('btnExplore').className = on ? 'btn danger' : 'btn';
+  syncAvoidBtn();
+};
+$('btnAvoid').onclick = () => {
+  if (ctl.exploreEnabled) return; // explorar siempre lleva anti-choque
+  ctl.setAvoid(!ctl.avoidEnabled);
+  syncAvoidBtn();
+};
+function syncAvoidBtn() {
+  const on = ctl.avoidEnabled;
+  $('btnAvoid').textContent = 'Anti-choque: ' + (on ? 'ON' : 'OFF');
+  $('btnAvoid').className = on ? 'btn' : 'btn gray';
+}
+
+// --- grabación de rutas ---
+$('btnRec').onclick = () => {
+  if (!connected) return;
+  ctl.recorder.start();
+  $('btnRec').disabled = true;
+  $('btnRecStop').disabled = false;
+  $('recInfo').textContent = 'Grabando… conduce el robot.';
+};
+$('btnRecStop').onclick = async () => {
+  const [events, dur] = ctl.recorder.stop();
+  $('btnRec').disabled = false;
+  $('btnRecStop').disabled = true;
+  if (!events.length) { $('recInfo').textContent = 'No se grabó ningún movimiento.'; return; }
+  const name = prompt('Nombre de la ruta:', 'Ruta ' + new Date().toLocaleString());
+  if (!name) { $('recInfo').textContent = 'Grabación descartada.'; return; }
+  await saveRoute(name, robot.typeName, events, dur);
+  $('recInfo').textContent = `Guardada «${name}» (${events.length} pasos).`;
+  refreshRoutes();
+};
+
+// --- lista de rutas ---
+async function refreshRoutes() {
+  const rows = await listRoutes();
+  const tb = $('routeList');
+  if (!rows.length) { tb.innerHTML = '<tr><td class="muted">Sin rutas guardadas.</td></tr>'; return; }
+  tb.innerHTML = '';
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.name}<br><span class="muted" style="font-size:12px">${r.steps} pasos · ${(r.dur_ms / 1000).toFixed(1)}s</span></td>`;
+    const td = document.createElement('td');
+    td.style.textAlign = 'right';
+    const play = document.createElement('button');
+    play.className = 'btn'; play.textContent = '▶'; play.style.width = 'auto'; play.style.padding = '8px 12px';
+    play.onclick = async () => {
+      if (!connected) return;
+      const steps = await getRouteSteps(r.id);
+      ctl.playRoute(steps);
+    };
+    const del = document.createElement('button');
+    del.className = 'btn danger'; del.textContent = '🗑'; del.style.width = 'auto'; del.style.padding = '8px 12px'; del.style.marginLeft = '6px';
+    del.onclick = async () => { await deleteRoute(r.id); refreshRoutes(); };
+    td.append(play, del);
+    tr.append(td);
+    tb.append(tr);
+  }
+}
+refreshRoutes();
 </script>
 </body>
 </html>
