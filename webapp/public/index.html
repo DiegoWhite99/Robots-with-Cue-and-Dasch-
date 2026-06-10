@@ -3,91 +3,156 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0a0618">
 <title>Control del Robot — Web Bluetooth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
 <style>
-  :root{ --bg:#0a0618; --panel:#160d2e; --field:#241653; --line:#3a2a6e;
-         --text:#f3eaff; --mute:#a99fd0; --cyan:#21e6ff; --magenta:#ff2bd6;
-         --ok:#2bff9b; --warn:#ffe23d; --danger:#ff4d6d; }
-  *{box-sizing:border-box;}
-  body{margin:0; color:var(--text); font-family:system-ui,"Segoe UI",sans-serif;
-       background:radial-gradient(60% 42% at 50% 0%, rgba(255,43,214,.18), transparent 60%), #0a0618;
-       padding-bottom:40px;}
-  header{display:flex; align-items:center; gap:12px; padding:14px 18px; flex-wrap:wrap;
-         border-bottom:1px solid var(--line);}
-  .brand{font-size:18px; font-weight:700; flex:1;}
-  .pill{padding:6px 13px; border-radius:999px; font-weight:600; font-size:13px; color:#08121f;
-        background:var(--warn);}
-  .pill.ok{background:var(--ok);} .pill.bad{background:var(--danger); color:#fff;}
-  .grid{display:grid; grid-template-columns:1fr; gap:18px; padding:18px; max-width:680px; margin:0 auto;}
-  @media(min-width:680px){ .grid{grid-template-columns:repeat(2,1fr);} .full{grid-column:1/-1;} }
-  .card{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:18px;}
-  .card h2{margin:0 0 12px; font-size:15px;}
-  .btn{border:0; border-radius:12px; padding:12px 14px; font-size:15px; font-weight:700;
-       cursor:pointer; color:#08121f; background:var(--cyan); width:100%;}
-  .btn.danger{background:var(--danger); color:#fff;} .btn.gray{background:var(--field); color:var(--text);}
+  :root{
+    --bg:#0a0618; --panel:#160d2e; --panel2:#1d1240; --field:#241653; --line:#3a2a6e;
+    --text:#f3eaff; --mute:#a99fd0;
+    --cyan:#21e6ff; --magenta:#ff2bd6; --purple:#b14dff; --yellow:#ffe23d; --green:#2bff9b;
+    --accent:#21e6ff; --accent2:#7df9ff; --ok:#2bff9b; --warn:#ffe23d; --danger:#ff4d6d;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; color:var(--text); padding-bottom:48px; position:relative; overflow-x:hidden;
+       font-family:"Fredoka",system-ui,"Segoe UI",sans-serif;}
+  /* fondo synthwave: resplandor + grid en perspectiva animado */
+  body::before{ content:""; position:fixed; inset:0; z-index:-2;
+    background:
+      radial-gradient(60% 42% at 50% 0%, rgba(255,43,214,.28), transparent 60%),
+      radial-gradient(46% 38% at 50% 6%, rgba(33,230,255,.20), transparent 60%),
+      linear-gradient(180deg,#1a0b3a 0%, #0a0618 58%); }
+  body::after{ content:""; position:fixed; left:-50%; right:-50%; bottom:-8%; height:55vh; z-index:-1;
+    background-image:linear-gradient(rgba(33,230,255,.40) 2px, transparent 2px),
+                     linear-gradient(90deg, rgba(255,43,214,.40) 2px, transparent 2px);
+    background-size:46px 46px;
+    transform:perspective(42vh) rotateX(72deg); transform-origin:50% 100%;
+    animation:grid 1.4s linear infinite;
+    -webkit-mask-image:linear-gradient(transparent, #000 45%); mask-image:linear-gradient(transparent, #000 45%); }
+  @keyframes grid{ from{background-position:0 0,0 0} to{background-position:0 46px,46px 0} }
+
+  header{display:flex; align-items:center; gap:12px; padding:13px 18px; position:sticky; top:0; z-index:10;
+         flex-wrap:wrap; background:rgba(12,6,28,.72); backdrop-filter:blur(10px);
+         -webkit-backdrop-filter:blur(10px); border-bottom:1px solid var(--line);}
+  .brand{display:flex; align-items:center; gap:9px; font-size:17px; font-weight:700; flex:1;
+         font-family:"Orbitron",sans-serif; letter-spacing:1px; text-shadow:0 0 12px rgba(33,230,255,.55);}
+  .brand .logo{font-size:22px; filter:drop-shadow(0 0 7px var(--cyan));}
+  select.robotsel{font-family:"Orbitron",sans-serif; font-weight:700; font-size:12px; color:var(--text);
+    background:linear-gradient(180deg,#241655,#170d31); border:1px solid var(--line); border-radius:12px;
+    padding:8px 10px; cursor:pointer;}
+  .pill{display:inline-flex; align-items:center; gap:7px; padding:6px 13px; border-radius:999px;
+        font-family:"Orbitron",sans-serif; font-weight:700; font-size:12px; color:#08121f;
+        background:linear-gradient(135deg,#ffe23d,#ff9d2b); box-shadow:0 0 16px currentColor; white-space:nowrap;}
+  .pill.ok{background:linear-gradient(135deg,#2bff9b,#11d0ff);}
+  .pill.bad{background:linear-gradient(135deg,#ff4d6d,#ff2bd6); color:#fff;}
+
+  /* pestañas estilo videojuego */
+  .tabs{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; padding:14px 16px 0;
+        max-width:1080px; margin:0 auto;}
+  .tab{font-family:"Orbitron",sans-serif; font-weight:800; font-size:13px; letter-spacing:.6px;
+       color:var(--mute); background:linear-gradient(180deg,#241655,#170d31); border:1px solid var(--line);
+       border-radius:14px; padding:12px 18px; cursor:pointer; transition:.15s; white-space:nowrap;}
+  .tab:hover{color:#fff; border-color:var(--cyan); transform:translateY(-2px);}
+  .tab.active{color:#08121f; background:linear-gradient(135deg,var(--cyan),var(--magenta));
+    border-color:transparent; box-shadow:0 0 22px rgba(33,230,255,.55); transform:translateY(-2px);}
+
+  .grid{display:grid; grid-template-columns:1fr; gap:18px; padding:18px; max-width:1080px; margin:0 auto;}
+  @media(min-width:820px){ .grid{grid-template-columns:repeat(2,1fr);} .full{grid-column:1 / -1;} }
+  .card{background:linear-gradient(180deg, rgba(36,22,83,.85), rgba(22,13,46,.92));
+    border:1px solid var(--line); border-radius:20px; padding:18px;
+    box-shadow:0 0 0 1px rgba(33,230,255,.05), 0 12px 34px rgba(0,0,0,.5);
+    animation:cardin .4s ease both;}
+  @keyframes cardin{ from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none} }
+  .card h2{margin:0 0 14px; font-size:14px; color:#fff; font-family:"Orbitron",sans-serif; letter-spacing:.5px;
+    text-shadow:0 0 9px rgba(177,77,255,.7); border-left:4px solid var(--magenta); padding-left:10px;}
+  .muted{color:var(--mute); font-size:13px; line-height:1.5;}
+
+  .btn{font-family:"Fredoka",sans-serif; border:0; border-radius:14px; padding:12px 14px; font-size:15px;
+    font-weight:700; cursor:pointer; color:#08121f; width:100%;
+    background:linear-gradient(135deg,var(--cyan),var(--purple));
+    box-shadow:0 0 14px rgba(33,230,255,.22), inset 0 0 0 1px rgba(255,255,255,.08); transition:filter .15s, transform .05s;}
+  .btn.ok{background:linear-gradient(135deg,#2bff9b,#11d0ff); color:#062018;}
+  .btn.danger{background:linear-gradient(135deg,#ff4d6d,#ff2bd6); color:#fff;}
+  .btn.gray{background:linear-gradient(135deg,#2a1c5e,#1d1240); color:#e9e3ff; box-shadow:inset 0 0 0 1px var(--line);}
+  .btn:hover:not(:disabled){filter:brightness(1.12); transform:translateY(-1px);}
   .btn:disabled{opacity:.45; cursor:not-allowed;}
-  .dpad{display:grid; grid-template-columns:repeat(3,72px); grid-template-rows:repeat(3,72px);
-        gap:9px; justify-content:center; margin:6px auto;}
-  .dpad button{font-size:25px; border-radius:14px; background:var(--field); color:var(--cyan);
-        border:1.5px solid rgba(33,230,255,.28); cursor:pointer; user-select:none; touch-action:none;}
-  .dpad button:active{background:rgba(33,230,255,.18);}
-  .dpad .stop{color:var(--magenta); border-color:rgba(255,43,214,.4);}
+  .row2{display:flex; gap:8px;} .row2 .btn{flex:1;}
+  select.sel, input.txt{width:100%; padding:11px; border-radius:12px; background:var(--field);
+    color:var(--text); border:1px solid var(--line); font-size:15px; font-family:"Fredoka",sans-serif;}
+
+  .dpad{display:grid; grid-template-columns:repeat(3,74px); grid-template-rows:repeat(3,74px);
+        gap:9px; justify-content:center; margin:6px auto 12px;}
+  .dpad button{font-size:25px; border-radius:16px; color:var(--cyan); background:rgba(255,255,255,.02);
+    border:1.5px solid rgba(33,230,255,.28); cursor:pointer; user-select:none; touch-action:none;
+    font-family:"Orbitron",sans-serif; font-weight:800; transition:transform .1s, box-shadow .12s;}
+  .dpad button:active{background:rgba(33,230,255,.14); border-color:var(--cyan); color:#eafdff;
+    transform:scale(.94); box-shadow:0 0 16px rgba(33,230,255,.5);}
+  .dpad .stop{font-size:13px; letter-spacing:1px; color:var(--magenta); border-color:rgba(255,43,214,.38);}
+  .dpad .stop:active{background:rgba(255,43,214,.18); border-color:var(--magenta); color:#fff; box-shadow:0 0 16px var(--magenta);}
   .b-fwd{grid-area:1/2;} .b-left{grid-area:2/1;} .b-stop{grid-area:2/2;}
   .b-right{grid-area:2/3;} .b-back{grid-area:3/2;}
+
   label.row{display:block; margin:12px 0 4px; color:var(--mute); font-size:13px;}
   input[type=range]{width:100%; accent-color:var(--magenta);}
   .colors{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
-  .colors button{border:0; border-radius:10px; padding:14px 4px; cursor:pointer;}
-  .row2{display:flex; gap:8px;}
-  .row2 .btn{flex:1;}
-  .muted{color:var(--mute); font-size:13px; line-height:1.5;}
-  .telemetry{display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:var(--mute);}
+  .colors button{border:0; border-radius:12px; padding:14px 4px; cursor:pointer;
+    box-shadow:0 0 12px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.15); transition:.12s;}
+  .colors button:hover{transform:scale(1.06);}
+
+  .telemetry{display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:var(--mute); margin-top:12px;}
   .telemetry b{color:var(--text);}
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  td{padding:8px; border-top:1px solid var(--line);}
+  .mini{padding:8px 12px; font-size:14px; border-radius:10px; border:0; cursor:pointer; color:#06201a; width:auto;}
+  .mini.play{background:linear-gradient(135deg,#2bff9b,#11d0ff);}
+  .mini.del{background:linear-gradient(135deg,#ff4d6d,#ff2bd6); color:#fff; margin-left:6px;}
+  canvas#map{width:100%; height:300px; background:#0c0820; border:1px solid var(--line); border-radius:14px; display:block;}
+  .mic{width:auto; flex:0 0 auto;}
+  .mic.rec{animation:micpulse 1s infinite; background:linear-gradient(135deg,#ff4d6d,#ff2bd6); color:#fff;}
+  @keyframes micpulse{0%,100%{filter:brightness(1)} 50%{filter:brightness(1.4)}}
+  [data-view]{display:none;} [data-view].show{display:block;}
+  @media(max-width:600px){ .dpad{grid-template-columns:repeat(3,76px); grid-template-rows:repeat(3,76px);} }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand">🤖 Control del Robot <span class="muted" style="font-size:12px">· Web Bluetooth</span></div>
+  <div class="brand"><span class="logo">🤖</span> Control del Robot</div>
+  <select id="typeSel" class="robotsel" title="Elegir robot">
+    <option value="any">🤖 Cualquiera</option>
+    <option value="dash">🤖 Dash</option>
+    <option value="cue">🧠 Cue</option>
+  </select>
   <span id="pill" class="pill">Sin conectar</span>
 </header>
 
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-tab="control">🎮 Control</button>
+  <button class="tab" data-tab="ia">🧠 IA</button>
+  <button class="tab" data-tab="explorar">🧭 Explorador</button>
+  <button class="tab" data-tab="mapa">🗺️ Mapa + Rutas</button>
+</nav>
+
 <div class="grid">
 
-  <div class="card full">
+  <!-- ===== CONTROL ===== -->
+  <div class="card full" data-view="control">
     <h2>🔌 Conexión</h2>
-    <label class="row" for="typeSel">Robot</label>
-    <select id="typeSel" style="width:100%; padding:10px; border-radius:10px; background:var(--field); color:var(--text); border:1px solid var(--line); margin-bottom:10px">
-      <option value="any">Cualquiera (Dash o Cue)</option>
-      <option value="dash">Dash</option>
-      <option value="cue">Cue</option>
-    </select>
     <div class="row2">
       <button class="btn" id="btnConnect">Conectar</button>
       <button class="btn gray" id="btnDisconnect" disabled>Desconectar</button>
     </div>
-    <p class="muted" id="warnSupport" style="display:none; color:var(--warn)">
-      ⚠️ Este navegador no soporta Web Bluetooth. Usa Chrome o Edge (no funciona en iPhone).
-    </p>
-    <div class="telemetry" id="telemetry" style="margin-top:12px">
+    <p class="muted" id="warnSupport" style="display:none; color:var(--warn)"></p>
+    <div class="telemetry">
       <span>Frente: <b id="tFront">—</b></span>
       <span>Atrás: <b id="tRear">—</b></span>
       <span>Rumbo: <b id="tDeg">—</b></span>
     </div>
   </div>
 
-  <div class="card full">
-    <h2>🧠 IA — dile qué hacer</h2>
-    <div style="display:flex; gap:8px; flex-wrap:wrap">
-      <input id="agentInput" type="text" placeholder='Ej: "camina 50 cm y gira a la derecha" · "ponte azul y baila"'
-             style="flex:1; min-width:200px; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:var(--field); color:var(--text); font-size:15px">
-      <button class="btn" id="agentSend" style="width:auto; flex:0 0 auto">Enviar ▸</button>
-      <button class="btn danger" id="agentStop" style="width:auto; flex:0 0 auto" disabled>■ Parar</button>
-    </div>
-    <p class="muted" id="agentSay" style="min-height:20px; margin-top:10px"></p>
-  </div>
-
-  <div class="card">
+  <div class="card" data-view="control">
     <h2>🎮 Conducir</h2>
     <div class="dpad">
       <button class="b-fwd" data-drive="fwd">▲</button>
@@ -100,11 +165,11 @@
     <input type="range" id="spd" min="5" max="60" value="30">
     <label class="row">Giro: <span id="turnVal">120</span> °/s</label>
     <input type="range" id="turn" min="20" max="200" value="120">
-    <p class="muted">Mantén presionado para mover (o usa W A S D · Espacio = parar).</p>
+    <p class="muted">Mantén presionado para mover (o W A S D · Espacio = parar).</p>
   </div>
 
-  <div class="card">
-    <h2>💡 Luces</h2>
+  <div class="card" data-view="control">
+    <h2>💡 Luces y cabeza</h2>
     <div class="colors">
       <button style="background:#ff2b3b" data-rgb="1,0,0"></button>
       <button style="background:#2bff5b" data-rgb="0,1,0"></button>
@@ -115,16 +180,31 @@
       <button style="background:#ffffff" data-rgb="1,1,1"></button>
       <button style="background:#222" data-rgb="0,0,0"></button>
     </div>
-    <label class="row">Cabeza — Pan: <span id="panVal">0</span>°</label>
+    <label class="row">Pan: <span id="panVal">0</span>°</label>
     <input type="range" id="pan" min="-120" max="120" value="0">
-    <label class="row">Cabeza — Tilt: <span id="tiltVal">0</span>°</label>
+    <label class="row">Tilt: <span id="tiltVal">0</span>°</label>
     <input type="range" id="tilt" min="-10" max="22" value="0">
   </div>
 
-  <div class="card">
+  <!-- ===== IA ===== -->
+  <div class="card full" data-view="ia">
+    <h2>🧠 IA — dile qué hacer</h2>
+    <div style="display:flex; gap:8px; flex-wrap:wrap">
+      <input id="agentInput" class="txt" type="text" style="flex:1; min-width:200px"
+             placeholder='Ej: "camina 50 cm y gira a la derecha" · "ponte azul y baila"'>
+      <button class="btn mic" id="agentMic" title="Dictar">🎤</button>
+      <button class="btn ok mic" id="agentSend">Enviar ▸</button>
+      <button class="btn danger mic" id="agentStop" disabled>■</button>
+    </div>
+    <p class="muted" id="agentHeard" style="min-height:18px; margin-top:8px"></p>
+    <p id="agentSay" style="min-height:22px; font-weight:600; color:#fff"></p>
+  </div>
+
+  <!-- ===== EXPLORADOR ===== -->
+  <div class="card full" data-view="explorar">
     <h2>🧭 Explorador autónomo</h2>
     <label class="row" for="profSel">Perfil</label>
-    <select id="profSel" style="width:100%; padding:10px; border-radius:10px; background:var(--field); color:var(--text); border:1px solid var(--line); margin-bottom:10px">
+    <select id="profSel" class="sel" style="margin-bottom:10px">
       <option value="suave">Suave</option>
       <option value="normal" selected>Normal</option>
       <option value="agresivo">Agresivo</option>
@@ -133,19 +213,26 @@
       <button class="btn" id="btnExplore">▶ Explorar</button>
       <button class="btn gray" id="btnAvoid">Anti-choque: OFF</button>
     </div>
-    <p class="muted" id="exploreInfo">Avanza solo evitando obstáculos (siempre con anti-choque).</p>
+    <p class="muted" id="exploreInfo" style="margin-top:10px">Avanza solo evitando obstáculos (siempre con anti-choque).</p>
   </div>
 
-  <div class="card">
-    <h2>🗺️ Grabar y reproducir rutas</h2>
+  <!-- ===== MAPA + RUTAS ===== -->
+  <div class="card full" data-view="mapa">
+    <h2>🗺️ Mapa del recorrido</h2>
+    <canvas id="map" width="800" height="300"></canvas>
+    <div class="row2" style="margin-top:10px">
+      <button class="btn gray" id="btnClearMap">Limpiar mapa</button>
+    </div>
+  </div>
+
+  <div class="card full" data-view="mapa">
+    <h2>📼 Grabar y reproducir rutas</h2>
     <div class="row2">
       <button class="btn" id="btnRec">● Grabar</button>
       <button class="btn gray" id="btnRecStop" disabled>■ Detener y guardar</button>
     </div>
     <p class="muted" id="recInfo" style="min-height:18px"></p>
-    <table style="width:100%; border-collapse:collapse; font-size:14px; margin-top:8px">
-      <tbody id="routeList"><tr><td class="muted">Sin rutas guardadas.</td></tr></tbody>
-    </table>
+    <table><tbody id="routeList"><tr><td class="muted">Sin rutas guardadas.</td></tr></tbody></table>
   </div>
 
 </div>
@@ -157,17 +244,25 @@ import { saveRoute, listRoutes, getRouteSteps, deleteRoute } from './js/routes-d
 
 const $ = (id) => document.getElementById(id);
 const robot = new WonderRobot();
-const ctl = new Controller(robot);   // envuelve al robot: dead-reckoning, explorador, grabador, replay
+const ctl = new Controller(robot);
 let connected = false;
 
+// ---------- pestañas ----------
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('[data-view]').forEach(v => v.classList.toggle('show', v.dataset.view === name));
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => showTab(t.dataset.tab));
+showTab('control');
+
+// ---------- soporte Web Bluetooth ----------
 if (!webBluetoothAvailable()) {
   const ua = navigator.userAgent;
   const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isFirefox = /Firefox/.test(ua);
-  let msg = '⚠️ Este navegador no soporta Web Bluetooth.';
-  if (isIOS) msg = '⚠️ Apple no permite Web Bluetooth en iPhone/iPad (ningún navegador de iOS lo soporta). Abre esta página en un Android o PC con Chrome/Edge.';
-  else if (isFirefox) msg = '⚠️ Firefox no soporta Web Bluetooth. Usa Chrome o Edge (en Android, Windows, Mac o Linux).';
-  else msg = '⚠️ Este navegador no soporta Web Bluetooth. Usa Chrome o Edge actualizado (no funciona en iPhone/iPad).';
+  let msg = '⚠️ Este navegador no soporta Web Bluetooth. Usa Chrome o Edge actualizado (no funciona en iPhone/iPad).';
+  if (isIOS) msg = '⚠️ Apple no permite Web Bluetooth en iPhone/iPad. Abre esta página en un Android o PC con Chrome/Edge.';
+  else if (isFirefox) msg = '⚠️ Firefox no soporta Web Bluetooth. Usa Chrome o Edge.';
   $('warnSupport').textContent = msg;
   $('warnSupport').style.display = 'block';
   $('btnConnect').disabled = true;
@@ -178,49 +273,43 @@ function setPill(text, cls) { const p = $('pill'); p.textContent = text; p.class
 robot.onConnect = (r) => {
   connected = true;
   setPill(`${r.typeName} «${r.name}»`, 'ok');
-  $('btnDisconnect').disabled = false;
-  $('btnConnect').disabled = true;
+  $('btnDisconnect').disabled = false; $('btnConnect').disabled = true;
   refreshRoutes();
 };
 robot.onDisconnect = () => {
   connected = false;
   setPill('Desconectado', 'bad');
-  $('btnDisconnect').disabled = true;
-  $('btnConnect').disabled = false;
+  $('btnDisconnect').disabled = true; $('btnConnect').disabled = false;
 };
-// El Controller ya consume robot.onSensors; aquí solo actualizamos telemetría.
 const baseOnSensors = robot.onSensors;
 robot.onSensors = (s) => {
-  baseOnSensors(s);  // mantiene dead-reckoning / avoid del Controller
+  baseOnSensors(s);
   $('tFront').textContent = ctl.lastDistance != null ? ctl.lastDistance.toFixed(0) + ' cm' : '—';
   $('tRear').textContent = ctl.lastDistanceRear != null ? ctl.lastDistanceRear.toFixed(0) + ' cm' : '—';
   $('tDeg').textContent = ctl.pose.valid ? ctl.pose.deg.toFixed(0) + '°' : '—';
-  if (ctl.recorder.recording) {
+  if (ctl.recorder.recording)
     $('recInfo').textContent = `Grabando… ${(ctl.recorder.elapsedMs() / 1000).toFixed(1)}s · ${ctl.recorder.stepCount()} pasos`;
-  }
 };
 
 $('btnConnect').onclick = async () => {
   try { setPill('Buscando…', ''); await robot.connect($('typeSel').value); }
-  catch (e) { setPill('Error', 'bad'); console.error(e); alert('No se pudo conectar: ' + e.message); }
+  catch (e) { setPill('Error', 'bad'); alert('No se pudo conectar: ' + e.message); }
 };
 $('btnDisconnect').onclick = () => robot.disconnect();
 
-// --- conducción ---
+// ---------- conducción ----------
 const spd = () => parseInt($('spd').value, 10);
 const turnSpd = () => parseInt($('turn').value, 10);
 $('spd').oninput = () => $('spdVal').textContent = spd();
 $('turn').oninput = () => $('turnVal').textContent = turnSpd();
-
 function doDrive(dir) {
-  if (!connected || ctl.avoiding || ctl.exploreEnabled) return; // bloqueado durante esquive/exploración
+  if (!connected || ctl.avoiding || ctl.exploreEnabled) return;
   if (dir === 'fwd') robot.drive(spd(), 0);
   else if (dir === 'back') robot.drive(-spd(), 0);
   else if (dir === 'left') robot.drive(0, turnSpd());
   else if (dir === 'right') robot.drive(0, -turnSpd());
 }
 function doStop() { if (connected) robot.stop(); }
-
 document.querySelectorAll('[data-drive]').forEach(btn => {
   const dir = btn.dataset.drive;
   btn.addEventListener('pointerdown', (e) => { e.preventDefault(); doDrive(dir); });
@@ -229,37 +318,25 @@ document.querySelectorAll('[data-drive]').forEach(btn => {
   btn.addEventListener('pointercancel', doStop);
 });
 $('btnStop').addEventListener('pointerdown', doStop);
-
-const keyMap = { w: 'fwd', s: 'back', a: 'left', d: 'right' };
-const held = {};
+const keyMap = { w: 'fwd', s: 'back', a: 'left', d: 'right' }, held = {};
 window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (k === ' ') { doStop(); return; }
   if (keyMap[k] && !held[k]) { held[k] = true; doDrive(keyMap[k]); }
 });
-window.addEventListener('keyup', (e) => {
-  const k = e.key.toLowerCase();
-  if (keyMap[k]) { held[k] = false; doStop(); }
-});
+window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (keyMap[k]) { held[k] = false; doStop(); } });
 
-// --- luces ---
-document.querySelectorAll('[data-rgb]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (!connected) return;
-    const [r, g, b] = btn.dataset.rgb.split(',').map(Number);
-    robot.lights(r, g, b);
-  });
-});
-
-// --- cabeza ---
-function applyHead() {
+// ---------- luces y cabeza ----------
+document.querySelectorAll('[data-rgb]').forEach(btn => btn.addEventListener('click', () => {
   if (!connected) return;
-  robot.head(parseInt($('pan').value, 10), parseInt($('tilt').value, 10));
-}
+  const [r, g, b] = btn.dataset.rgb.split(',').map(Number);
+  robot.lights(r, g, b);
+}));
+function applyHead() { if (connected) robot.head(parseInt($('pan').value, 10), parseInt($('tilt').value, 10)); }
 $('pan').oninput = () => { $('panVal').textContent = $('pan').value; applyHead(); };
 $('tilt').oninput = () => { $('tiltVal').textContent = $('tilt').value; applyHead(); };
 
-// --- explorador autónomo ---
+// ---------- explorador ----------
 $('profSel').onchange = () => ctl.setExploreProfile($('profSel').value);
 $('btnExplore').onclick = () => {
   if (!connected) return;
@@ -269,29 +346,72 @@ $('btnExplore').onclick = () => {
   $('btnExplore').className = on ? 'btn danger' : 'btn';
   syncAvoidBtn();
 };
-$('btnAvoid').onclick = () => {
-  if (ctl.exploreEnabled) return; // explorar siempre lleva anti-choque
-  ctl.setAvoid(!ctl.avoidEnabled);
-  syncAvoidBtn();
-};
+$('btnAvoid').onclick = () => { if (!ctl.exploreEnabled) { ctl.setAvoid(!ctl.avoidEnabled); syncAvoidBtn(); } };
 function syncAvoidBtn() {
-  const on = ctl.avoidEnabled;
-  $('btnAvoid').textContent = 'Anti-choque: ' + (on ? 'ON' : 'OFF');
-  $('btnAvoid').className = on ? 'btn' : 'btn gray';
+  $('btnAvoid').textContent = 'Anti-choque: ' + (ctl.avoidEnabled ? 'ON' : 'OFF');
+  $('btnAvoid').className = ctl.avoidEnabled ? 'btn' : 'btn gray';
 }
 
-// --- grabación de rutas ---
+// ---------- IA + micrófono ----------
+const AGENT_URL = window.AGENT_URL || '/agent';
+function speak(text) {
+  if (!text || !('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text); u.lang = 'es-ES';
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+async function sendAgent() {
+  const text = $('agentInput').value.trim();
+  if (!text) return;
+  if (!connected) { $('agentSay').textContent = 'Conecta el robot primero.'; return; }
+  if (ctl.agentBusy) { $('agentSay').textContent = 'La IA ya está ejecutando una rutina.'; return; }
+  $('agentSay').textContent = 'Pensando…'; $('agentSend').disabled = true;
+  try {
+    const resp = await fetch(AGENT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+    const data = await resp.json();
+    if (!data.ok) { $('agentSay').textContent = data.error || 'Error de la IA.'; return; }
+    $('agentSay').textContent = data.say || '(sin texto)';
+    speak(data.say);
+    if (data.steps && data.steps.length) { ctl.runPlan(data.steps); $('agentStop').disabled = false; }
+  } catch (e) { $('agentSay').textContent = 'No se pudo contactar la IA: ' + e.message; }
+  finally { $('agentSend').disabled = false; }
+}
+$('agentSend').onclick = sendAgent;
+$('agentInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendAgent(); });
+$('agentStop').onclick = () => { ctl.stopAgent(); robot.stop(); $('agentStop').disabled = true; };
+
+// reconocimiento de voz (Web Speech API)
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) { $('agentMic').style.display = 'none'; }
+else {
+  const rec = new SR();
+  rec.lang = 'es-ES'; rec.interimResults = true; rec.continuous = false;
+  let listening = false;
+  rec.onresult = (e) => {
+    let txt = '';
+    for (let i = 0; i < e.results.length; i++) txt += e.results[i][0].transcript;
+    $('agentInput').value = txt;
+    $('agentHeard').textContent = '🎤 ' + txt;
+    if (e.results[e.results.length - 1].isFinal) { listening = false; $('agentMic').classList.remove('rec'); sendAgent(); }
+  };
+  rec.onend = () => { listening = false; $('agentMic').classList.remove('rec'); };
+  rec.onerror = (e) => { listening = false; $('agentMic').classList.remove('rec'); $('agentHeard').textContent = 'Mic: ' + e.error; };
+  $('agentMic').onclick = () => {
+    if (listening) { rec.stop(); return; }
+    try { rec.start(); listening = true; $('agentMic').classList.add('rec'); $('agentHeard').textContent = '🎤 Escuchando…'; }
+    catch (_) {}
+  };
+}
+
+// ---------- grabación de rutas ----------
 $('btnRec').onclick = () => {
   if (!connected) return;
   ctl.recorder.start();
-  $('btnRec').disabled = true;
-  $('btnRecStop').disabled = false;
+  $('btnRec').disabled = true; $('btnRecStop').disabled = false;
   $('recInfo').textContent = 'Grabando… conduce el robot.';
 };
 $('btnRecStop').onclick = async () => {
   const [events, dur] = ctl.recorder.stop();
-  $('btnRec').disabled = false;
-  $('btnRecStop').disabled = true;
+  $('btnRec').disabled = false; $('btnRecStop').disabled = true;
   if (!events.length) { $('recInfo').textContent = 'No se grabó ningún movimiento.'; return; }
   const name = prompt('Nombre de la ruta:', 'Ruta ' + new Date().toLocaleString());
   if (!name) { $('recInfo').textContent = 'Grabación descartada.'; return; }
@@ -299,8 +419,6 @@ $('btnRecStop').onclick = async () => {
   $('recInfo').textContent = `Guardada «${name}» (${events.length} pasos).`;
   refreshRoutes();
 };
-
-// --- lista de rutas ---
 async function refreshRoutes() {
   const rows = await listRoutes();
   const tb = $('routeList');
@@ -309,68 +427,61 @@ async function refreshRoutes() {
   for (const r of rows) {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${r.name}<br><span class="muted" style="font-size:12px">${r.steps} pasos · ${(r.dur_ms / 1000).toFixed(1)}s</span></td>`;
-    const td = document.createElement('td');
-    td.style.textAlign = 'right';
-    const play = document.createElement('button');
-    play.className = 'btn'; play.textContent = '▶'; play.style.width = 'auto'; play.style.padding = '8px 12px';
-    play.onclick = async () => {
-      if (!connected) return;
-      const steps = await getRouteSteps(r.id);
-      ctl.playRoute(steps);
-    };
-    const del = document.createElement('button');
-    del.className = 'btn danger'; del.textContent = '🗑'; del.style.width = 'auto'; del.style.padding = '8px 12px'; del.style.marginLeft = '6px';
+    const td = document.createElement('td'); td.style.textAlign = 'right';
+    const play = document.createElement('button'); play.className = 'mini play'; play.textContent = '▶ Reproducir';
+    play.onclick = async () => { if (connected) ctl.playRoute(await getRouteSteps(r.id)); };
+    const del = document.createElement('button'); del.className = 'mini del'; del.textContent = '🗑';
     del.onclick = async () => { await deleteRoute(r.id); refreshRoutes(); };
-    td.append(play, del);
-    tr.append(td);
-    tb.append(tr);
+    td.append(play, del); tr.append(td); tb.append(tr);
   }
 }
 refreshRoutes();
 
-// --- agente IA (Cloud Function /agent) ---
-// En Firebase Hosting, /agent se reescribe a la Cloud Function. En local usa el
-// emulador (firebase emulators:start) o define window.AGENT_URL.
-const AGENT_URL = window.AGENT_URL || '/agent';
-
-function speak(text) {
-  if (!text || !('speechSynthesis' in window)) return;
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'es-ES';
-  speechSynthesis.cancel();
-  speechSynthesis.speak(u);
-}
-
-async function sendAgent() {
-  const text = $('agentInput').value.trim();
-  if (!text) return;
-  if (!connected) { $('agentSay').textContent = 'Conecta el robot primero.'; return; }
-  if (ctl.agentBusy) { $('agentSay').textContent = 'La IA ya está ejecutando una rutina.'; return; }
-  $('agentSay').textContent = 'Pensando…';
-  $('agentSend').disabled = true;
-  try {
-    const resp = await fetch(AGENT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
-    const data = await resp.json();
-    if (!data.ok) { $('agentSay').textContent = data.error || 'Error de la IA.'; return; }
-    $('agentSay').textContent = data.say || '(sin texto)';
-    speak(data.say);
-    if (data.steps && data.steps.length) {
-      ctl.runPlan(data.steps);
-      $('agentStop').disabled = false;
-    }
-  } catch (e) {
-    $('agentSay').textContent = 'No se pudo contactar la IA: ' + e.message;
-  } finally {
-    $('agentSend').disabled = false;
+// ---------- mapa (canvas) ----------
+$('btnClearMap').onclick = () => ctl.clearTrack();
+const cv = $('map'), cx = cv.getContext('2d');
+function drawMap() {
+  const w = cv.width, h = cv.height;
+  cx.clearRect(0, 0, w, h);
+  const snap = ctl.trackSnapshot();
+  const pts = snap.trail.slice();
+  const cur = snap.current;
+  if (cur && cur.valid) pts.push([cur.x, cur.y]);
+  // límites
+  let minX = -20, maxX = 20, minY = -20, maxY = 20;
+  for (const [x, y] of pts) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); }
+  const pad = 20, spanX = (maxX - minX) || 1, spanY = (maxY - minY) || 1;
+  const scale = Math.min((w - 2 * pad) / spanX, (h - 2 * pad) / spanY);
+  const tx = (x) => pad + (x - minX) * scale;
+  const ty = (y) => h - pad - (y - minY) * scale; // +Y hacia arriba
+  // mapa de calor
+  let maxC = 1;
+  for (const [, , c] of snap.heat) maxC = Math.max(maxC, c);
+  const bin = snap.bin * scale;
+  for (const [ix, iy, c] of snap.heat) {
+    const a = 0.12 + 0.5 * (c / maxC);
+    cx.fillStyle = `rgba(255,43,214,${a.toFixed(3)})`;
+    cx.fillRect(tx(ix * snap.bin), ty(iy * snap.bin) - bin, Math.max(2, bin), Math.max(2, bin));
+  }
+  // traza
+  if (snap.trail.length > 1) {
+    cx.strokeStyle = '#21e6ff'; cx.lineWidth = 2; cx.beginPath();
+    snap.trail.forEach(([x, y], i) => { const X = tx(x), Y = ty(y); i ? cx.lineTo(X, Y) : cx.moveTo(X, Y); });
+    cx.stroke();
+  }
+  // pose actual (flecha)
+  if (cur && cur.valid) {
+    const X = tx(cur.x), Y = ty(cur.y), a = cur.deg * Math.PI / 180;
+    cx.fillStyle = '#2bff9b';
+    cx.save(); cx.translate(X, Y); cx.rotate(-a);
+    cx.beginPath(); cx.moveTo(10, 0); cx.lineTo(-6, 6); cx.lineTo(-6, -6); cx.closePath(); cx.fill();
+    cx.restore();
+  } else {
+    cx.fillStyle = 'rgba(169,159,208,.5)'; cx.font = '13px Fredoka';
+    cx.fillText('Conecta y mueve el robot para ver el mapa.', 16, 24);
   }
 }
-$('agentSend').onclick = sendAgent;
-$('agentInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendAgent(); });
-$('agentStop').onclick = () => { ctl.stopAgent(); robot.stop(); $('agentStop').disabled = true; };
+setInterval(drawMap, 200);
 </script>
 </body>
 </html>
