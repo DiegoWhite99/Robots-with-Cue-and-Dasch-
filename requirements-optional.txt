@@ -1,0 +1,8 @@
+# Optional desktop voice and packaging tools.
+# Install only when you need the Tkinter voice control or .exe builds.
+
+-r requirements.txt
+
+SpeechRecognition>=3.10,<4
+PyAudio>=0.2.14,<0.3
+pyinstaller>=6.0,<7

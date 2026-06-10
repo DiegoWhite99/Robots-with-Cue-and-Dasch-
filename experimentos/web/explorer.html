@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explorador Inteligente</title>
+<style>
+  :root{
+    --bg:#0a0618; --panel:#160d2e; --panel2:#1d1240; --field:#241653; --line:#3a2a6e;
+    --text:#f3eaff; --mute:#a99fd0; --cyan:#21e6ff; --magenta:#ff2bd6;
+    --ok:#2bff9b; --warn:#ffe23d; --danger:#ff4d6d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; color:var(--text); font-family:Segoe UI,system-ui,sans-serif;
+       background:radial-gradient(80% 45% at 50% -10%, rgba(255,43,214,.24), transparent 55%), #0a0618;}
+  header{position:sticky; top:0; z-index:5; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+         padding:12px 16px; background:rgba(10,6,24,.86); border-bottom:1px solid var(--line);}
+  h1{margin:0; font-size:18px; letter-spacing:.4px}
+  .grow{flex:1}
+  .pill{padding:6px 12px; border-radius:999px; font-weight:700; font-size:12px; background:#30215f; border:1px solid var(--line)}
+  .pill.ok{background:rgba(43,255,155,.16); border-color:rgba(43,255,155,.5); color:var(--ok)}
+  .pill.warn{background:rgba(255,226,61,.16); border-color:rgba(255,226,61,.5); color:var(--warn)}
+  .pill.bad{background:rgba(255,77,109,.16); border-color:rgba(255,77,109,.45); color:var(--danger)}
+  .btn{border:1px solid var(--line); background:linear-gradient(180deg,#241655,#170d31); color:var(--text);
+       border-radius:12px; padding:10px 12px; font-weight:700; cursor:pointer}
+  .btn.ok{background:linear-gradient(135deg,#2bff9b,#11d0ff); color:#072117; border-color:transparent}
+  .btn.danger{background:linear-gradient(135deg,#ff4d6d,#ff2bd6); color:#fff; border-color:transparent}
+  .btn:disabled{opacity:.45; cursor:not-allowed}
+  .grid{max-width:1180px; margin:14px auto 28px; padding:0 14px; display:grid; gap:12px;
+        grid-template-columns:1fr}
+  @media(min-width:980px){ .grid{grid-template-columns:1.15fr .85fr} .full{grid-column:1/-1} }
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel)); border:1px solid var(--line); border-radius:16px; padding:14px}
+  .card h2{margin:0 0 10px; font-size:14px; border-left:3px solid var(--magenta); padding-left:8px}
+  .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+  .muted{color:var(--mute); font-size:12px}
+  .metric{display:grid; grid-template-columns:repeat(3,minmax(130px,1fr)); gap:8px}
+  .tile{background:rgba(0,0,0,.2); border:1px solid var(--line); border-radius:12px; padding:10px}
+  .tile b{font-size:19px}
+  .log{max-height:220px; overflow:auto; background:rgba(0,0,0,.26); border-radius:10px; border:1px solid #2a1f53; padding:8px; font-size:12px; line-height:1.45}
+  canvas{width:100%; height:auto; display:block; border-radius:12px; border:1px solid var(--line); background:#0c0820}
+  select{background:var(--field); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:8px 10px}
+</style>
+</head>
+<body>
+<header>
+  <a class="btn" href="/">← Volver al panel</a>
+  <h1>🧠 Explorador Inteligente (aprendizaje anti-bucle)</h1>
+  <div class="grow"></div>
+  <select id="robotSel" title="Robot preferido">
+    <option value="any">🤖 Cualquiera</option>
+    <option value="dash">🤖 Dash</option>
+    <option value="cue">🤖 Cue</option>
+  </select>
+  <select id="expProfile" title="Perfil de exploración">
+    <option value="suave">🟢 Suave</option>
+    <option value="normal" selected>🟡 Normal</option>
+    <option value="agresivo">🔴 Agresivo</option>
+  </select>
+  <span id="pill" class="pill warn">Buscando…</span>
+  <button id="btnReconnect" class="btn">Reconectar</button>
+</header>
+
+<div class="grid">
+  <div class="card full">
+    <h2>Control</h2>
+    <div class="row">
+      <button id="btnExploreOn" class="btn ok">▶ Iniciar exploración</button>
+      <button id="btnExploreOff" class="btn danger">⏹ Detener</button>
+      <button id="btnResetLearn" class="btn">♻ Reiniciar aprendizaje</button>
+      <button id="btnResetLearnMap" class="btn">♻ Reiniciar + limpiar mapa</button>
+      <button id="btnClearMap" class="btn">🧹 Limpiar mapa</button>
+    </div>
+    <div id="expState" class="muted" style="margin-top:8px"></div>
+    <div id="expProfileInfo" class="muted" style="margin-top:5px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Métricas de Aprendizaje</h2>
+    <div class="metric">
+      <div class="tile"><div class="muted">Escapes</div><b id="mEsc">0</b></div>
+      <div class="tile"><div class="muted">Bucles evitados</div><b id="mLoop">0</b></div>
+      <div class="tile"><div class="muted">Atascos</div><b id="mStuck">0</b></div>
+      <div class="tile"><div class="muted">Giros izq</div><b id="mLeft">0</b></div>
+      <div class="tile"><div class="muted">Giros der</div><b id="mRight">0</b></div>
+      <div class="tile"><div class="muted">Bias</div><b id="mBias">0</b></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div class="tile" style="flex:1">
+        <div class="muted">Última decisión</div>
+        <div id="mLast">—</div>
+      </div>
+      <div class="tile" style="flex:1">
+        <div class="muted">Celda actual</div>
+        <div id="mCell">—</div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div class="tile" style="flex:1">
+        <div class="muted">Distancia frente</div>
+        <div id="mFront">— cm</div>
+      </div>
+      <div class="tile" style="flex:1">
+        <div class="muted">Distancia atrás</div>
+        <div id="mRear">— cm</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Eventos recientes</h2>
+    <div id="evLog" class="log">Sin eventos todavía.</div>
+  </div>
+
+  <div class="card full">
+    <h2>Mapa de exploración (trayecto + calor)</h2>
+    <canvas id="mapCanvas" width="980" height="380"></canvas>
+    <div id="mapInfo" class="muted" style="margin-top:6px"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const mapCanvas = $("mapCanvas");
+const mctx = mapCanvas.getContext("2d");
+const qs = new URLSearchParams(location.search);
+const keyFromUrl = (qs.get("api_key") || qs.get("k") || "").trim();
+if(keyFromUrl){ localStorage.setItem("robot_api_key", keyFromUrl); }
+function getApiKey(){
+  return (localStorage.getItem("robot_api_key") || "").trim();
+}
+const PROFILE_INFO = {
+  suave: "Suave: más cauteloso, movimientos lentos y giros progresivos.",
+  normal: "Normal: equilibrio entre avance y evasión.",
+  agresivo: "Agresivo: reacciona más rápido, giros y escapes más fuertes.",
+};
+
+async function api(path, method="GET", body=null){
+  try{
+    const opt={method, headers:{}};
+    const apiKey = getApiKey();
+    if(apiKey) opt.headers["X-API-Key"] = apiKey;
+    if(body){ opt.headers["Content-Type"]="application/json"; opt.body=JSON.stringify(body); }
+    const r = await fetch(path, opt);
+    const txt = await r.text();
+    let data = null;
+    try{ data = txt ? JSON.parse(txt) : {}; }catch(_){}
+    if(data && typeof data==="object"){
+      if(data.ok===undefined) data.ok = r.ok;
+      return data;
+    }
+    if(r.status===401){
+      return {
+        ok:false,
+        status:r.status,
+        error: apiKey
+          ? "API key rechazada. Revisa localStorage['robot_api_key']."
+          : "Servidor protegido. Abre con ?api_key=TU_CLAVE"
+      };
+    }
+    return {ok:false, error:"Respuesta no JSON", raw:txt.slice(0,120)};
+  }catch(e){
+    return {ok:false, error:String(e)};
+  }
+}
+
+function paintMap(d){
+  const W=mapCanvas.width, H=mapCanvas.height, pad=30;
+  mctx.fillStyle="#0c0820"; mctx.fillRect(0,0,W,H);
+  mctx.strokeStyle="rgba(123,80,255,.16)";
+  for(let x=0;x<=W;x+=40){ mctx.beginPath(); mctx.moveTo(x,0); mctx.lineTo(x,H); mctx.stroke(); }
+  for(let y=0;y<=H;y+=40){ mctx.beginPath(); mctx.moveTo(0,y); mctx.lineTo(W,y); mctx.stroke(); }
+  const trail=d.trail||[], heat=d.heat||[], cur=d.current||{}, bin=d.bin||5;
+  let pts=trail.slice();
+  if(cur.valid) pts.push([cur.x,cur.y]);
+  heat.forEach(h=>pts.push([h[0]*bin,h[1]*bin]));
+  if(!pts.length){ $("mapInfo").textContent="Sin puntos aún."; return; }
+
+  let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  pts.forEach(p=>{minx=Math.min(minx,p[0]);maxx=Math.max(maxx,p[0]);miny=Math.min(miny,p[1]);maxy=Math.max(maxy,p[1]);});
+  if(maxx-minx<40){const c=(minx+maxx)/2;minx=c-20;maxx=c+20;}
+  if(maxy-miny<40){const c=(miny+maxy)/2;miny=c-20;maxy=c+20;}
+  const s=Math.min((W-2*pad)/(maxx-minx),(H-2*pad)/(maxy-miny));
+  const ox=(W-(maxx-minx)*s)/2, oy=(H-(maxy-miny)*s)/2;
+  const TX=x=>ox+(x-minx)*s, TY=y=>H-oy-(y-miny)*s;
+
+  let maxc=1; heat.forEach(h=>maxc=Math.max(maxc,h[2]||1));
+  const cell=Math.max(2,bin*s);
+  mctx.globalAlpha=.58;
+  heat.forEach(h=>{
+    const t=(h[2]||1)/maxc;
+    mctx.fillStyle="hsl("+((1-t)*240)+",90%,55%)";
+    mctx.fillRect(TX(h[0]*bin)-cell/2, TY(h[1]*bin)-cell/2, cell+1, cell+1);
+  });
+  mctx.globalAlpha=1;
+
+  if(trail.length>1){
+    mctx.beginPath(); mctx.strokeStyle="#e8e8ea"; mctx.lineWidth=2;
+    trail.forEach((p,i)=>{ const X=TX(p[0]),Y=TY(p[1]); i?mctx.lineTo(X,Y):mctx.moveTo(X,Y); });
+    mctx.stroke();
+  }
+  if(trail.length){
+    mctx.fillStyle="#22c55e"; mctx.beginPath(); mctx.arc(TX(trail[0][0]),TY(trail[0][1]),5,0,7); mctx.fill();
+  }
+  if(cur.valid){
+    const X=TX(cur.x),Y=TY(cur.y),a=(cur.deg||0)*Math.PI/180;
+    mctx.fillStyle="#3b82f6"; mctx.beginPath(); mctx.arc(X,Y,7,0,7); mctx.fill();
+    mctx.strokeStyle="#3b82f6"; mctx.lineWidth=3; mctx.beginPath(); mctx.moveTo(X,Y);
+    mctx.lineTo(X+Math.cos(a)*18, Y-Math.sin(a)*18); mctx.stroke();
+  }
+  $("mapInfo").textContent = "Puntos: "+trail.length+" · calor celdas: "+heat.length;
+}
+
+function setStatus(s){
+  const pill=$("pill");
+  if(s.connected){
+    pill.className="pill " + (s.signal?"ok":"warn");
+    pill.textContent=s.signal ? ("Conectado: "+(s.robot||"Robot")) : ("Conectado sin sensores: "+(s.robot||"Robot"));
+  }else if(s.state==="searching"){
+    pill.className="pill warn"; pill.textContent="Buscando… ("+s.search_s+"s)";
+  }else{
+    pill.className="pill bad"; pill.textContent="Sin robot";
+  }
+  if($("robotSel") && s.robot_pref) $("robotSel").value = s.robot_pref;
+  const profile = s.explore_profile || (s.explore_ai && s.explore_ai.profile) || "normal";
+  if($("expProfile")) $("expProfile").value = profile;
+  $("expProfileInfo").textContent = PROFILE_INFO[profile] || PROFILE_INFO.normal;
+
+  $("mFront").textContent = (s.distance==null ? "— cm" : (s.distance.toFixed(0)+" cm"));
+  $("mRear").textContent = (s.distance_rear==null ? "— cm" : (s.distance_rear.toFixed(0)+" cm"));
+  $("expState").textContent =
+    "Explorador: " + (s.explore ? "ON" : "OFF") +
+    " · Perfil: " + profile +
+    " · Evitar obstáculos: " + (s.avoid ? "ON" : "OFF");
+
+  const ai = s.explore_ai || {};
+  $("mEsc").textContent = ai.escapes || 0;
+  $("mLoop").textContent = ai.loops_avoided || 0;
+  $("mStuck").textContent = ai.stuck_events || 0;
+  $("mLeft").textContent = ai.turn_left || 0;
+  $("mRight").textContent = ai.turn_right || 0;
+  $("mBias").textContent = (ai.turn_bias==null ? "0" : Number(ai.turn_bias).toFixed(2));
+  $("mLast").textContent = (ai.last_reason || "—") + (ai.last_decision ? (" / "+ai.last_decision) : "");
+  if(ai.cell) $("mCell").textContent = ai.cell.ix + "," + ai.cell.iy + " · v=" + ai.cell.visits;
+  else $("mCell").textContent = "sin pose";
+
+  const recent = Array.isArray(ai.recent) ? ai.recent : [];
+  $("evLog").textContent = recent.length ? recent.slice().reverse().join("\n") : "Sin eventos todavía.";
+  $("btnExploreOn").disabled = !!s.explore;
+  $("btnExploreOff").disabled = !s.explore;
+}
+
+async function pollStatus(){
+  const s = await api("/api/status");
+  if(s && s.ok!==false) setStatus(s);
+}
+async function pollTrack(){
+  const t = await api("/api/track");
+  if(t && Array.isArray(t.trail)) paintMap(t);
+}
+
+$("btnReconnect").addEventListener("click", async()=>{ await api("/api/reconnect","POST"); });
+$("robotSel").addEventListener("change", async e=>{ await api("/api/select_robot","POST",{type:e.target.value}); });
+$("expProfile").addEventListener("change", async e=>{ await api("/api/explore/profile","POST",{mode:e.target.value}); pollStatus(); });
+$("btnExploreOn").addEventListener("click", async()=>{ await api("/api/explore","POST",{on:true}); pollStatus(); });
+$("btnExploreOff").addEventListener("click", async()=>{ await api("/api/explore","POST",{on:false}); pollStatus(); });
+$("btnResetLearn").addEventListener("click", async()=>{ await api("/api/explore/reset","POST",{clear_map:false}); pollStatus(); });
+$("btnResetLearnMap").addEventListener("click", async()=>{ await api("/api/explore/reset","POST",{clear_map:true}); pollStatus(); pollTrack(); });
+$("btnClearMap").addEventListener("click", async()=>{ await api("/api/track/clear","POST"); pollTrack(); });
+
+pollStatus(); setInterval(pollStatus, 900);
+pollTrack(); setInterval(pollTrack, 800);
+</script>
+</body>
+</html>

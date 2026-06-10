@@ -1,0 +1,19 @@
+CARPETA DE AUDIOS
+=================
+
+Pon aquí tus archivos de audio (voces, frases en español, efectos, etc.).
+
+Formatos soportados:  .mp3  .wav  .ogg  .m4a
+
+Cómo usarlos:
+1. Copia tus archivos de audio dentro de esta carpeta.
+2. Abre la app web (INICIAR_APP_WEB.bat) y dale F5 al navegador.
+3. En la tarjeta "🎵 Mis audios" aparecerán listados (pulsa "Actualizar" si no salen).
+4. Pulsa ▶ para reproducirlos.
+
+IMPORTANTE:
+- El sonido sale por el PARLANTE DEL DISPOSITIVO (el PC o el celular donde abres
+  la app), NO por el parlante del robot. Ponlo cerca de Fede para que parezca
+  que habla él.
+- Al robot NO se le puede subir audio nuevo por Bluetooth (su protocolo solo
+  reproduce los clips que ya trae de fábrica o los 10 grabados con la app Wonder).

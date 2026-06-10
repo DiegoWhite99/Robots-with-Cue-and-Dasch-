@@ -1,0 +1,5 @@
+# WonderPy library dependencies.
+# Keep these aligned with pyproject.toml.
+bleak>=2.1.1,<4
+mock>=5.2,<6
+svgpathtools>=1.7,<2

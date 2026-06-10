@@ -1,0 +1,18 @@
+# Runtime dependencies for the full robot project.
+# Python 3.12 is the tested environment on Windows 11 + BLE.
+
+-e ./WonderPy
+
+# Web dashboard / production server
+Flask>=3.1,<4
+waitress>=3.0
+cryptography>=42
+
+# AI routines
+openai>=2.0,<3
+python-dotenv>=1.0,<2
+
+# WonderPy runtime pins/ranges known to work with this project
+bleak>=2.1.1,<4
+svgpathtools>=1.7,<2
+mock>=5.2,<6

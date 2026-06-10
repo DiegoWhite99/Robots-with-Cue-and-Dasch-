@@ -1,0 +1,18 @@
+# Secretos / configuración local
+.env
+
+# Base de datos de rutas
+rutas.db
+
+# Logs
+server.log
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Audio temporal
+*.wav

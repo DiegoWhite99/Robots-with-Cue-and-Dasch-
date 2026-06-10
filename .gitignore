@@ -1,0 +1,42 @@
+# Python caches / build
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local secrets / runtime state
+.env
+*.local
+rutas.db
+*.db-journal
+
+# Logs
+*.log
+*.err.log
+*.out.log
+
+# OS / editor noise
+desktop.ini
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+**/.git-local-backup/
+
+# Local scratch/vendor unpacked artifacts
+tmp_pkg/
+.claude/
+
+# Robot-generated temporary files
+*.tmp
+*.wav
