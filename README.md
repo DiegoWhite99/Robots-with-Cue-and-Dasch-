@@ -67,8 +67,9 @@ Está en `webapp/` y desplegada en **https://cue-and-dash.web.app**.
 
 ### Funciones del panel
 - 🎮 **Control:** modo gamepad a pantalla completa horizontal con 2 joysticks
-  (izquierdo = conducir con resorte, derecho = mover la cabeza) y sliders verticales
-  de velocidad (degradado verde→rojo) y giro. También W A S D.
+  (izquierdo = conducir con resorte, derecho = mover la cabeza), sliders verticales
+  de velocidad (degradado verde→rojo) y giro, y un micrófono para hablarle a la IA
+  sin salir del control. También W A S D.
 - 🧠 **IA:** orden en lenguaje natural + micrófono por voz + 12 rutinas rápidas.
 - 🧭 **Explorador:** autónomo con 3 perfiles, anti-choque y dashboard de aprendizaje.
 - 🗺️ **Mapa + Rutas:** mapa visual del recorrido (traza + calor + pose) y grabar/
