@@ -89,7 +89,7 @@
       radial-gradient(46% 38% at 50% 6%, rgba(33,230,255,.16), transparent 60%),
       linear-gradient(180deg,#1a0b3a 0%, #0a0618 60%);}
   .gp.show{display:flex;}
-  .gp-top{position:relative; display:flex; align-items:center; padding:14px 20px;}
+  .gp-top{position:relative; display:flex; align-items:center; justify-content:space-between; padding:14px 20px;}
   .gp-title{position:absolute; left:50%; transform:translateX(-50%); font-family:"Orbitron",sans-serif;
     font-weight:800; color:var(--cyan); font-size:13px; letter-spacing:1px; text-shadow:0 0 10px rgba(33,230,255,.6);}
   .gp-joys{flex:1; display:flex; align-items:center; justify-content:space-around; gap:24px; padding:6px 24px 28px;}
@@ -281,6 +281,7 @@
   <div class="gp-top">
     <button class="btn gray" id="gpExit" style="width:auto">✕ Salir</button>
     <span class="gp-title" id="gpStatus">Controlando el robot</span>
+    <button class="btn mic" id="gpMic" title="Hablar a la IA" style="width:auto; font-size:18px">🎤</button>
   </div>
   <div class="gp-joys">
     <div class="joybox">
@@ -556,25 +557,27 @@ IA_PRESETS.forEach(p => {
 
 // reconocimiento de voz (Web Speech API)
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-if (!SR) { $('agentMic').style.display = 'none'; }
+if (!SR) { $('agentMic').style.display = 'none'; $('gpMic').style.display = 'none'; }
 else {
   const rec = new SR();
   rec.lang = 'es-ES'; rec.interimResults = true; rec.continuous = false;
   let listening = false;
+  const setMic = (on) => { listening = on; $('agentMic').classList.toggle('rec', on); $('gpMic').classList.toggle('rec', on); };
   rec.onresult = (e) => {
     let txt = '';
     for (let i = 0; i < e.results.length; i++) txt += e.results[i][0].transcript;
     $('agentInput').value = txt;
     $('agentHeard').textContent = '🎤 ' + txt;
-    if (e.results[e.results.length - 1].isFinal) { listening = false; $('agentMic').classList.remove('rec'); sendAgent(); }
+    if (e.results[e.results.length - 1].isFinal) { setMic(false); sendAgent(); }
   };
-  rec.onend = () => { listening = false; $('agentMic').classList.remove('rec'); };
-  rec.onerror = (e) => { listening = false; $('agentMic').classList.remove('rec'); $('agentHeard').textContent = 'Mic: ' + e.error; };
-  $('agentMic').onclick = () => {
+  rec.onend = () => setMic(false);
+  rec.onerror = (e) => { setMic(false); $('agentHeard').textContent = 'Mic: ' + e.error; };
+  const toggleMic = () => {
     if (listening) { rec.stop(); return; }
-    try { rec.start(); listening = true; $('agentMic').classList.add('rec'); $('agentHeard').textContent = '🎤 Escuchando…'; }
-    catch (_) {}
+    try { rec.start(); setMic(true); $('agentHeard').textContent = '🎤 Escuchando…'; } catch (_) {}
   };
+  $('agentMic').onclick = toggleMic;
+  $('gpMic').onclick = toggleMic;
 }
 
 // ---------- grabación de rutas ----------
