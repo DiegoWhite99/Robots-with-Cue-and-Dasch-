@@ -5,8 +5,9 @@ local y rutinas con IA.
 
 > 🌐 **App web en la nube:** existe una segunda versión que controla el robot
 > **directo desde el navegador** por Web Bluetooth (sin servidor Python), desplegada
-> en Firebase: **https://cue-and-dash.web.app** (abrir en Chrome/Edge; no funciona en
-> iPhone/iPad). Ver [`webapp/README.md`](webapp/README.md).
+> en Firebase: **https://cue-and-dash.web.app**. Abrir en **Chrome/Edge** (Android, PC,
+> Mac); en Android hay que **encender la ubicación**. No funciona en iPhone/iPad ni
+> Firefox. Ver [`webapp/README.md`](webapp/README.md).
 
 ## Instalacion rapida
 
@@ -62,16 +63,34 @@ python dash_test.py
 ## App web en Firebase (Web Bluetooth)
 
 Versión que no necesita PC con Python: el navegador habla BLE directo con el robot.
-Está en `webapp/` y desplegada en https://cue-and-dash.web.app.
+Está en `webapp/` y desplegada en **https://cue-and-dash.web.app**.
 
-Probar la lógica sin robot (puerto del protocolo verificado contra Python):
+### Funciones del panel
+- 🎮 **Control:** modo gamepad a pantalla completa horizontal con 2 joysticks
+  (izquierdo = conducir con resorte, derecho = mover la cabeza) y sliders verticales
+  de velocidad (degradado verde→rojo) y giro. También W A S D.
+- 🧠 **IA:** orden en lenguaje natural + micrófono por voz + 12 rutinas rápidas.
+- 🧭 **Explorador:** autónomo con 3 perfiles, anti-choque y dashboard de aprendizaje.
+- 🗺️ **Mapa + Rutas:** mapa visual del recorrido (traza + calor + pose) y grabar/
+  reproducir rutas (guardadas en el navegador con IndexedDB).
+- 🎨 Estética synthwave con pestañas.
+
+### Compatibilidad y uso
+- ✅ **Chrome o Edge** en Android, Windows, macOS, Linux.
+- ❌ **No funciona en iPhone/iPad** (Apple bloquea Web Bluetooth) ni en **Firefox**.
+- ⚠️ **En Android, enciende la UBICACIÓN (GPS) y dale permiso de ubicación a Chrome**,
+  o el escaneo Bluetooth sale vacío (causa #1 de "no aparece el robot").
+- El robot debe estar encendido y **no conectado a otra app/dispositivo** (se conecta
+  a uno a la vez; no lo emparejes desde los ajustes de Bluetooth del teléfono).
+
+### Probar la lógica sin robot (verificada contra Python)
 
 ```powershell
 node webapp\test\check_js.mjs          # protocolo: 16/16 identico a Python
 node webapp\test\controller_check.mjs  # alto nivel: 27/27
 ```
 
-Desplegar (resumen — detalle en `webapp/README.md`):
+### Desplegar (resumen — detalle en `webapp/README.md`)
 
 ```powershell
 cd webapp
