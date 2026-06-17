@@ -104,9 +104,21 @@
   .joylabel{font-family:"Orbitron",sans-serif; font-size:13px; color:var(--mute); font-weight:700;}
   .throttle{width:70%; height:10px; border-radius:6px; background:var(--field); overflow:hidden;}
   .throttle-fill{height:100%; width:0%; background:linear-gradient(90deg,var(--green),var(--cyan),var(--magenta)); transition:width .06s;}
-  .gp-sliders{display:flex; flex-direction:column; gap:26px; justify-content:center; flex:0 1 320px; min-width:160px;}
-  .gp-slider label{display:block; color:var(--mute); font-size:13px; margin-bottom:6px; text-align:center;}
-  .gp-slider input[type=range]{width:100%; accent-color:var(--magenta);}
+  .gp-sliders{display:flex; flex-direction:row; gap:46px; justify-content:center; align-items:flex-start;}
+  .gp-slider{display:flex; flex-direction:column; align-items:center; gap:14px;}
+  .gp-slider label{color:var(--mute); font-size:13px; text-align:center;}
+  /* slider vertical: se dibuja horizontal y se rota -90° (mín abajo, máx arriba) */
+  .vwrap{height:190px; width:44px; display:flex; align-items:center; justify-content:center;}
+  .vwrap input[type=range]{width:190px; transform:rotate(-90deg); accent-color:var(--magenta);}
+  /* velocidad: degradado verde (lento) -> rojo (rápido) */
+  #spd{-webkit-appearance:none; appearance:none; height:12px; border-radius:8px; background:transparent;}
+  #spd::-webkit-slider-runnable-track{height:12px; border-radius:8px;
+    background:linear-gradient(to right, #2bff9b 0%, #b6ff2b 30%, #ffe23d 55%, #ff9d2b 78%, #ff4d6d 100%);}
+  #spd::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:24px; height:24px; margin-top:-6px;
+    border-radius:50%; background:#fff; box-shadow:0 0 10px rgba(255,255,255,.85);}
+  #spd::-moz-range-track{height:12px; border-radius:8px;
+    background:linear-gradient(to right, #2bff9b, #ffe23d, #ff4d6d);}
+  #spd::-moz-range-thumb{width:22px; height:22px; border:0; border-radius:50%; background:#fff;}
   .gp-rotate{display:none; position:absolute; inset:0; align-items:center; justify-content:center;
     text-align:center; font-family:"Orbitron",sans-serif; color:var(--cyan); font-size:16px; padding:30px;
     background:rgba(10,6,24,.92);}
@@ -284,11 +296,11 @@
     <div class="gp-sliders">
       <div class="gp-slider">
         <label>Velocidad: <span id="spdVal">30</span> cm/s</label>
-        <input type="range" id="spd" min="5" max="60" value="30">
+        <div class="vwrap"><input type="range" id="spd" min="5" max="60" value="30"></div>
       </div>
       <div class="gp-slider">
         <label>Giro: <span id="turnVal">120</span> °/s</label>
-        <input type="range" id="turn" min="20" max="200" value="120">
+        <div class="vwrap"><input type="range" id="turn" min="20" max="200" value="120"></div>
       </div>
     </div>
     <div class="joybox">
