@@ -8,6 +8,9 @@ local y rutinas con IA.
 > en Firebase: **https://cue-and-dash.web.app**. Abrir en **Chrome/Edge** (Android, PC,
 > Mac); en Android hay que **encender la ubicación**. No funciona en iPhone/iPad ni
 > Firefox. Ver [`webapp/README.md`](webapp/README.md).
+>
+> 📖 **¿Cómo se usa?** Guía paso a paso para el usuario final en
+> [`MANUAL_USUARIO.md`](MANUAL_USUARIO.md) (conectar, controlar y solución de problemas).
 
 ## Instalacion rapida
 
