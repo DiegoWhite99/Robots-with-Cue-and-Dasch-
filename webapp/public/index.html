@@ -89,9 +89,9 @@
       radial-gradient(46% 38% at 50% 6%, rgba(33,230,255,.16), transparent 60%),
       linear-gradient(180deg,#1a0b3a 0%, #0a0618 60%);}
   .gp.show{display:flex;}
-  .gp-top{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px;}
-  .gp-title{font-family:"Orbitron",sans-serif; font-weight:800; color:var(--cyan); font-size:13px;
-    letter-spacing:1px; text-shadow:0 0 10px rgba(33,230,255,.6);}
+  .gp-top{position:relative; display:flex; align-items:center; padding:14px 20px;}
+  .gp-title{position:absolute; left:50%; transform:translateX(-50%); font-family:"Orbitron",sans-serif;
+    font-weight:800; color:var(--cyan); font-size:13px; letter-spacing:1px; text-shadow:0 0 10px rgba(33,230,255,.6);}
   .gp-joys{flex:1; display:flex; align-items:center; justify-content:space-around; gap:24px; padding:6px 24px 28px;}
   .joybox{display:flex; flex-direction:column; align-items:center; gap:10px;}
   .joy{width:min(40vw,40vh,300px); height:min(40vw,40vh,300px); touch-action:none; cursor:grab;
@@ -104,9 +104,8 @@
   .joylabel{font-family:"Orbitron",sans-serif; font-size:13px; color:var(--mute); font-weight:700;}
   .throttle{width:70%; height:10px; border-radius:6px; background:var(--field); overflow:hidden;}
   .throttle-fill{height:100%; width:0%; background:linear-gradient(90deg,var(--green),var(--cyan),var(--magenta)); transition:width .06s;}
-  .gp-sliders{display:flex; gap:30px; justify-content:center; flex-wrap:wrap; padding:0 30px 22px;}
-  .gp-slider{flex:1; min-width:200px; max-width:360px;}
-  .gp-slider label{display:block; color:var(--mute); font-size:13px; margin-bottom:6px;}
+  .gp-sliders{display:flex; flex-direction:column; gap:26px; justify-content:center; flex:0 1 320px; min-width:160px;}
+  .gp-slider label{display:block; color:var(--mute); font-size:13px; margin-bottom:6px; text-align:center;}
   .gp-slider input[type=range]{width:100%; accent-color:var(--magenta);}
   .gp-rotate{display:none; position:absolute; inset:0; align-items:center; justify-content:center;
     text-align:center; font-family:"Orbitron",sans-serif; color:var(--cyan); font-size:16px; padding:30px;
@@ -270,7 +269,6 @@
   <div class="gp-top">
     <button class="btn gray" id="gpExit" style="width:auto">✕ Salir</button>
     <span class="gp-title" id="gpStatus">Controlando el robot</span>
-    <button class="btn danger" id="gpStop" style="width:auto">■ STOP</button>
   </div>
   <div class="gp-joys">
     <div class="joybox">
@@ -283,6 +281,16 @@
       <div class="joylabel">🚗 Conducir</div>
       <div class="throttle"><div class="throttle-fill" id="thrFill"></div></div>
     </div>
+    <div class="gp-sliders">
+      <div class="gp-slider">
+        <label>Velocidad: <span id="spdVal">30</span> cm/s</label>
+        <input type="range" id="spd" min="5" max="60" value="30">
+      </div>
+      <div class="gp-slider">
+        <label>Giro: <span id="turnVal">120</span> °/s</label>
+        <input type="range" id="turn" min="20" max="200" value="120">
+      </div>
+    </div>
     <div class="joybox">
       <svg class="joy" viewBox="0 0 120 120" aria-label="Cabeza">
         <circle class="joy-ring" cx="60" cy="60" r="54"/>
@@ -291,16 +299,6 @@
         <circle class="joy-knob" id="joyRknob" cx="60" cy="60" r="15"/>
       </svg>
       <div class="joylabel">🤖 Cabeza</div>
-    </div>
-  </div>
-  <div class="gp-sliders">
-    <div class="gp-slider">
-      <label>Velocidad: <span id="spdVal">30</span> cm/s</label>
-      <input type="range" id="spd" min="5" max="60" value="30">
-    </div>
-    <div class="gp-slider">
-      <label>Giro: <span id="turnVal">120</span> °/s</label>
-      <input type="range" id="turn" min="20" max="200" value="120">
     </div>
   </div>
   <div class="gp-rotate">📱 Gira el teléfono en horizontal para controlar mejor.</div>
@@ -404,7 +402,6 @@ function exitGamepad() {
 }
 $('btnGamepad').onclick = enterGamepad;
 $('gpExit').onclick = exitGamepad;
-$('gpStop').onclick = () => { if (connected) robot.stop(); setThrottle(0); };
 // salir si el usuario cierra la pantalla completa con Esc
 document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement && gpOverlay.classList.contains('show')) exitGamepad();
