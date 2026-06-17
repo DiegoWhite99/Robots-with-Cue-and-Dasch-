@@ -82,17 +82,32 @@
   select.sel, input.txt{width:100%; padding:11px; border-radius:12px; background:var(--field);
     color:var(--text); border:1px solid var(--line); font-size:15px; font-family:"Fredoka",sans-serif;}
 
-  .dpad{display:grid; grid-template-columns:repeat(3,74px); grid-template-rows:repeat(3,74px);
-        gap:9px; justify-content:center; margin:6px auto 12px;}
-  .dpad button{font-size:25px; border-radius:16px; color:var(--cyan); background:rgba(255,255,255,.02);
-    border:1.5px solid rgba(33,230,255,.28); cursor:pointer; user-select:none; touch-action:none;
-    font-family:"Orbitron",sans-serif; font-weight:800; transition:transform .1s, box-shadow .12s;}
-  .dpad button:active{background:rgba(33,230,255,.14); border-color:var(--cyan); color:#eafdff;
-    transform:scale(.94); box-shadow:0 0 16px rgba(33,230,255,.5);}
-  .dpad .stop{font-size:13px; letter-spacing:1px; color:var(--magenta); border-color:rgba(255,43,214,.38);}
-  .dpad .stop:active{background:rgba(255,43,214,.18); border-color:var(--magenta); color:#fff; box-shadow:0 0 16px var(--magenta);}
-  .b-fwd{grid-area:1/2;} .b-left{grid-area:2/1;} .b-stop{grid-area:2/2;}
-  .b-right{grid-area:2/3;} .b-back{grid-area:3/2;}
+  /* ===== modo gamepad: pantalla completa horizontal con 2 joysticks ===== */
+  .gp{display:none; position:fixed; inset:0; z-index:100; flex-direction:column;
+    background:
+      radial-gradient(60% 42% at 50% 0%, rgba(255,43,214,.22), transparent 60%),
+      radial-gradient(46% 38% at 50% 6%, rgba(33,230,255,.16), transparent 60%),
+      linear-gradient(180deg,#1a0b3a 0%, #0a0618 60%);}
+  .gp.show{display:flex;}
+  .gp-top{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px;}
+  .gp-title{font-family:"Orbitron",sans-serif; font-weight:800; color:var(--cyan); font-size:13px;
+    letter-spacing:1px; text-shadow:0 0 10px rgba(33,230,255,.6);}
+  .gp-joys{flex:1; display:flex; align-items:center; justify-content:space-around; gap:24px; padding:6px 24px 28px;}
+  .joybox{display:flex; flex-direction:column; align-items:center; gap:10px;}
+  .joy{width:min(40vw,40vh,300px); height:min(40vw,40vh,300px); touch-action:none; cursor:grab;
+    user-select:none; -webkit-user-select:none; border-radius:50%;
+    background:radial-gradient(circle at 50% 50%, rgba(33,230,255,.06), transparent 70%);}
+  .joy:active{cursor:grabbing;}
+  .joy-ring{stroke:var(--line); fill:rgba(33,230,255,.03); stroke-width:2;}
+  .joy-cross{stroke:var(--purple); opacity:.5; stroke-width:1.2; stroke-dasharray:3 4;}
+  .joy-knob{fill:var(--cyan); filter:drop-shadow(0 0 11px var(--cyan)); transition:cx .04s, cy .04s;}
+  .joylabel{font-family:"Orbitron",sans-serif; font-size:13px; color:var(--mute); font-weight:700;}
+  .throttle{width:70%; height:10px; border-radius:6px; background:var(--field); overflow:hidden;}
+  .throttle-fill{height:100%; width:0%; background:linear-gradient(90deg,var(--green),var(--cyan),var(--magenta)); transition:width .06s;}
+  .gp-rotate{display:none; position:absolute; inset:0; align-items:center; justify-content:center;
+    text-align:center; font-family:"Orbitron",sans-serif; color:var(--cyan); font-size:16px; padding:30px;
+    background:rgba(10,6,24,.92);}
+  @media(orientation:portrait){ .gp.show .gp-rotate{display:flex;} }
 
   label.row{display:block; margin:12px 0 4px; color:var(--mute); font-size:13px;}
   input[type=range]{width:100%; accent-color:var(--magenta);}
@@ -113,7 +128,6 @@
   .mic.rec{animation:micpulse 1s infinite; background:linear-gradient(135deg,#ff4d6d,#ff2bd6); color:#fff;}
   @keyframes micpulse{0%,100%{filter:brightness(1)} 50%{filter:brightness(1.4)}}
   [data-view]{display:none;} [data-view].show{display:block;}
-  @media(max-width:600px){ .dpad{grid-template-columns:repeat(3,76px); grid-template-rows:repeat(3,76px);} }
 </style>
 </head>
 <body>
@@ -154,18 +168,12 @@
 
   <div class="card" data-view="control">
     <h2>🎮 Conducir</h2>
-    <div class="dpad">
-      <button class="b-fwd" data-drive="fwd">▲</button>
-      <button class="b-left" data-drive="left">◀</button>
-      <button class="b-stop stop" id="btnStop">STOP</button>
-      <button class="b-right" data-drive="right">▶</button>
-      <button class="b-back" data-drive="back">▼</button>
-    </div>
+    <button class="btn" id="btnGamepad" style="font-size:16px; padding:16px">🕹️ Controlar el robot</button>
+    <p class="muted" style="margin-top:8px">Abre los 2 joysticks en pantalla completa horizontal: izquierdo = conducir, derecho = mover la cabeza. También sirve W A S D (Espacio = parar).</p>
     <label class="row">Velocidad: <span id="spdVal">30</span> cm/s</label>
     <input type="range" id="spd" min="5" max="60" value="30">
     <label class="row">Giro: <span id="turnVal">120</span> °/s</label>
     <input type="range" id="turn" min="20" max="200" value="120">
-    <p class="muted">Mantén presionado para mover (o W A S D · Espacio = parar).</p>
   </div>
 
   <div class="card" data-view="control">
@@ -257,6 +265,37 @@
 
 </div>
 
+<!-- ===== overlay gamepad (pantalla completa horizontal) ===== -->
+<div id="gamepad" class="gp">
+  <div class="gp-top">
+    <button class="btn gray" id="gpExit" style="width:auto">✕ Salir</button>
+    <span class="gp-title" id="gpStatus">Controlando el robot</span>
+    <button class="btn danger" id="gpStop" style="width:auto">■ STOP</button>
+  </div>
+  <div class="gp-joys">
+    <div class="joybox">
+      <svg class="joy" viewBox="0 0 120 120" aria-label="Conducir">
+        <circle class="joy-ring" cx="60" cy="60" r="54"/>
+        <line class="joy-cross" x1="60" y1="16" x2="60" y2="104"/>
+        <line class="joy-cross" x1="16" y1="60" x2="104" y2="60"/>
+        <circle class="joy-knob" id="joyLknob" cx="60" cy="60" r="15"/>
+      </svg>
+      <div class="joylabel">🚗 Conducir</div>
+      <div class="throttle"><div class="throttle-fill" id="thrFill"></div></div>
+    </div>
+    <div class="joybox">
+      <svg class="joy" viewBox="0 0 120 120" aria-label="Cabeza">
+        <circle class="joy-ring" cx="60" cy="60" r="54"/>
+        <line class="joy-cross" x1="60" y1="16" x2="60" y2="104"/>
+        <line class="joy-cross" x1="16" y1="60" x2="104" y2="60"/>
+        <circle class="joy-knob" id="joyRknob" cx="60" cy="60" r="15"/>
+      </svg>
+      <div class="joylabel">🤖 Cabeza</div>
+    </div>
+  </div>
+  <div class="gp-rotate">📱 Gira el teléfono en horizontal para controlar mejor.</div>
+</div>
+
 <script type="module">
 import { WonderRobot, webBluetoothAvailable } from './js/robot.js';
 import { Controller } from './js/controller.js';
@@ -330,14 +369,6 @@ function doDrive(dir) {
   else if (dir === 'right') robot.drive(0, -turnSpd());
 }
 function doStop() { if (connected) robot.stop(); }
-document.querySelectorAll('[data-drive]').forEach(btn => {
-  const dir = btn.dataset.drive;
-  btn.addEventListener('pointerdown', (e) => { e.preventDefault(); doDrive(dir); });
-  btn.addEventListener('pointerup', doStop);
-  btn.addEventListener('pointerleave', doStop);
-  btn.addEventListener('pointercancel', doStop);
-});
-$('btnStop').addEventListener('pointerdown', doStop);
 const keyMap = { w: 'fwd', s: 'back', a: 'left', d: 'right' }, held = {};
 window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
@@ -345,6 +376,72 @@ window.addEventListener('keydown', (e) => {
   if (keyMap[k] && !held[k]) { held[k] = true; doDrive(keyMap[k]); }
 });
 window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (keyMap[k]) { held[k] = false; doStop(); } });
+
+// ---------- modo gamepad (pantalla completa horizontal + 2 joysticks) ----------
+const gpOverlay = $('gamepad');
+async function enterGamepad() {
+  if (!connected) { alert('Conecta el robot primero.'); return; }
+  gpOverlay.classList.add('show');
+  try { await gpOverlay.requestFullscreen(); } catch (_) {}
+  try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch (_) {}
+}
+function exitGamepad() {
+  if (connected) robot.stop();
+  setThrottle(0);
+  gpOverlay.classList.remove('show');
+  try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (_) {}
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch (_) {}
+}
+$('btnGamepad').onclick = enterGamepad;
+$('gpExit').onclick = exitGamepad;
+$('gpStop').onclick = () => { if (connected) robot.stop(); setThrottle(0); };
+// salir si el usuario cierra la pantalla completa con Esc
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && gpOverlay.classList.contains('show')) exitGamepad();
+});
+
+function setJoy(id, x, y) { const k = $(id); if (k) { k.setAttribute('cx', 60 + (x || 0) * 44); k.setAttribute('cy', 60 + (y || 0) * 44); } }
+function setThrottle(v) { const f = $('thrFill'); if (f) f.style.width = Math.max(0, Math.min(1, v || 0)) * 100 + '%'; }
+
+// dedupe de envíos (puerto de jSendDrive/jSendHead del panel original)
+let jdLast = '', jdT = 0, jhLast = '', jhT = 0;
+function jSendDrive(lin, ang) {
+  const k = lin + ',' + ang, t = performance.now();
+  if (k === jdLast && t - jdT < 55) return; jdLast = k; jdT = t;
+  if (lin === 0 && ang === 0) robot.stop(); else robot.drive(lin, ang);
+}
+function jSendHead(pan, tilt) {
+  const k = pan + ',' + tilt, t = performance.now();
+  if (k === jhLast && t - jhT < 80) return; jhLast = k; jhT = t;
+  robot.head(pan, tilt);
+}
+function makeJoystick(knobId, spring, onMove, onEnd) {
+  const knob = $(knobId); if (!knob) return;
+  const svg = knob.ownerSVGElement || knob.parentNode;
+  let active = false;
+  function compute(ev) {
+    const r = svg.getBoundingClientRect();
+    let x = (ev.clientX - (r.left + r.width / 2)) / (r.width * 0.42);
+    let y = (ev.clientY - (r.top + r.height / 2)) / (r.height * 0.42);
+    const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; }
+    knob.setAttribute('cx', 60 + x * 44); knob.setAttribute('cy', 60 + y * 44);
+    onMove(x, y);
+  }
+  svg.addEventListener('pointerdown', (ev) => { active = true; try { svg.setPointerCapture(ev.pointerId); } catch (_) {} ev.preventDefault(); compute(ev); });
+  svg.addEventListener('pointermove', (ev) => { if (active) { ev.preventDefault(); compute(ev); } });
+  const end = () => { if (!active) return; active = false; if (spring) { knob.setAttribute('cx', 60); knob.setAttribute('cy', 60); } onEnd(); };
+  svg.addEventListener('pointerup', end);
+  svg.addEventListener('pointercancel', end);
+  svg.addEventListener('pointerleave', end);
+}
+// izquierdo = conducir (resorte: al soltar, para)
+makeJoystick('joyLknob', true,
+  (x, y) => { if (!connected) return; const v = spd(), t = turnSpd(); const lin = Math.round(-y * v), ang = Math.round(-x * t); setThrottle(v ? Math.abs(lin) / v : 0); jSendDrive(lin, ang); },
+  () => { setThrottle(0); jSendDrive(0, 0); });
+// derecho = cabeza (se queda donde lo dejes)
+makeJoystick('joyRknob', false,
+  (x, y) => { if (!connected) return; jSendHead(Math.round(-x * 120), Math.round(-y * 22)); },
+  () => {});
 
 // ---------- luces y cabeza ----------
 document.querySelectorAll('[data-rgb]').forEach(btn => btn.addEventListener('click', () => {
